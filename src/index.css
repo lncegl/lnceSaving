@@ -1,0 +1,274 @@
+/* ============================================================
+   src/index.css
+   Global stylesheet for lnceSaving / Sprout
+   
+   Load order matters:
+     1. Google Fonts   – must come before Tailwind so font-family
+                         tokens are available during build
+     2. Tailwind base  – resets
+     3. Tailwind components / utilities
+     4. Custom layers  – extend, never override, Tailwind utilities
+
+   Font roles (match Tailwind config in tailwind.config.js):
+     font-sans   → Inter        (body text, labels, UI chrome)
+     font-serif  → Fraunces     (headings, hero numbers, brand)
+     font-mono   → Space Mono   (currency values, dates, codes)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ── Base layer overrides ──────────────────────────────────── */
+@layer base {
+  /* Prevent FOUC on root before React mounts */
+  #root {
+    min-height: 100dvh;
+  }
+
+  html {
+    /* Smooth scrolling everywhere */
+    scroll-behavior: smooth;
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-[#F5F8F0] text-gray-800 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Prevent layout shift when scrollbar appears */
+    scrollbar-gutter: stable;
+  }
+
+  /* ── Typography defaults ── */
+  h1, h2, h3, h4 {
+    font-family: 'Fraunces', Georgia, serif;
+  }
+
+  /* Ensure number inputs don't show browser spinners */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  /* Date input icon inherits theme color on Webkit */
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+  }
+
+  /* Remove default select arrow so Tailwind `appearance-none` works */
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.25rem;
+  }
+}
+
+
+/* ── Component layer — reusable UI primitives ─────────────── */
+@layer components {
+
+  /* ── Shared card shell ── */
+  .card {
+    @apply bg-white border border-gray-100 rounded-2xl shadow-sm;
+  }
+
+  /* ── Primary action button ── */
+  .btn-primary {
+    @apply w-full flex items-center justify-center gap-2
+           bg-[#1F3D2B] text-[#C7E26E]
+           font-bold text-sm
+           py-2.5 px-4 rounded-xl
+           hover:opacity-90 active:opacity-80
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-opacity;
+  }
+
+  /* ── Secondary / ghost button ── */
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2
+           bg-[#F0F7EC] text-[#1F3D2B]
+           border border-[#C7E26E]/60
+           font-semibold text-sm
+           py-2 px-4 rounded-xl
+           hover:bg-[#E3F2D7] active:bg-[#D4EAC4]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors;
+  }
+
+  /* ── Danger button ── */
+  .btn-danger {
+    @apply flex items-center justify-center gap-2
+           bg-red-50 text-red-600
+           border border-red-200
+           font-semibold text-sm
+           py-2 px-4 rounded-xl
+           hover:bg-red-100 active:bg-red-200
+           disabled:opacity-50
+           transition-colors;
+  }
+
+  /* ── Standard text input / select ── */
+  .field-input {
+    @apply w-full border border-gray-200 rounded-xl
+           px-3 py-2 text-sm bg-white text-gray-800
+           placeholder:text-gray-400
+           focus:outline-none focus:ring-2 focus:ring-[#C7E26E] focus:border-[#C7E26E]
+           disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed
+           transition-shadow;
+  }
+
+  /* ── Field label wrapper ── */
+  .field-label {
+    @apply text-xs text-gray-500 font-semibold;
+  }
+
+  /* ── Section heading inside a card ── */
+  .section-heading {
+    @apply font-serif text-xl text-[#1F3D2B] mb-4;
+  }
+
+  /* ── Eyebrow label (monospace, caps) ── */
+  .eyebrow {
+    @apply font-mono text-xs uppercase tracking-widest text-gray-400;
+  }
+
+  /* ── Success / info / warning / error alert strips ── */
+  .alert-success {
+    @apply flex items-start gap-2 bg-green-50 border border-green-200
+           text-green-800 text-xs font-semibold rounded-xl px-3 py-2;
+  }
+  .alert-error {
+    @apply flex items-start gap-2 bg-red-50 border border-red-200
+           text-red-700 text-xs font-semibold rounded-xl px-3 py-2;
+  }
+  .alert-warning {
+    @apply flex items-start gap-2 bg-yellow-50 border border-yellow-200
+           text-yellow-800 text-xs font-semibold rounded-xl px-3 py-2;
+  }
+  .alert-info {
+    @apply flex items-start gap-2 bg-blue-50 border border-blue-200
+           text-blue-700 text-xs font-semibold rounded-xl px-3 py-2;
+  }
+}
+
+
+/* ── Utilities layer ───────────────────────────────────────── */
+@layer utilities {
+
+  /* ── Thin custom scrollbar (Webkit) ── */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #C7E26E transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #C7E26E;
+    border-radius: 999px;
+  }
+
+  /* ── Hide scrollbar but keep scroll functionality ── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Text that never wraps and truncates with ellipsis ── */
+  .text-truncate {
+    @apply truncate overflow-hidden whitespace-nowrap;
+  }
+
+  /* ── Animated gradient shimmer (loading skeletons) ── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #E7EEDD 25%,
+      #F0F7EC 50%,
+      #E7EEDD 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* ── Vine / progress track ── */
+  .vine-track {
+    @apply relative h-3 rounded-full bg-green-100 overflow-visible;
+  }
+  .vine-fill {
+    @apply absolute inset-y-0 left-0 rounded-full
+           bg-gradient-to-r from-[#2D5640] via-[#4F7E5B] to-[#C7E26E]
+           transition-all duration-700 ease-out;
+  }
+
+  /* ── Focus-visible ring that matches brand ── */
+  .focus-brand:focus-visible {
+    @apply outline-none ring-2 ring-[#C7E26E] ring-offset-2;
+  }
+}
+
+
+/* ── Keyframe animations ───────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.03); }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Utility classes for the above animations */
+.animate-fade-slide-up {
+  animation: fadeSlideUp 0.25s ease-out both;
+}
+.animate-pop-in {
+  animation: popIn 0.2s ease-out both;
+}
+
+
+/* ── Print styles ──────────────────────────────────────────── */
+@media print {
+  /* Hide nav and interactive chrome when printing a statement */
+  aside, nav, button, .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    font-size: 11pt;
+  }
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+}
