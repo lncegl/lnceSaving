@@ -9,8 +9,8 @@ import { supabase } from '../lib/supabaseClient';
 
 const NAV_ITEMS = [
   { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { id: 'transactions', label: 'Transactions', icon: ArrowRightLeft  },
   { id: 'goals',        label: 'Goals',        icon: Target          },
+  { id: 'transactions', label: 'Transactions', icon: ArrowRightLeft  },
   { id: 'insights',     label: 'Insights',     icon: BarChart3       },
   { id: 'assistant',    label: 'AI Assistant', icon: MessageCircle   },
 ];
