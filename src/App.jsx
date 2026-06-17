@@ -1,158 +1,125 @@
 // src/App.jsx
 // ─────────────────────────────────────────────────────────────
-// Root component.
-//   1. Calls useSavings() once — all data + actions live here
-//   2. Passes slices down to each child component (no prop-drilling
-//      hell because each tab only receives what it needs)
-//   3. Renders auth gate if user is not signed in
+// Root component — updated from the original scaffold.
+//
+// Changes from the original version:
+//   1. Removed the inline `AuthScreen` function →
+//      replaced with `import Auth from './components/Auth'`
+//   2. Added lazy import for `Settings`
+//   3. Added `activeTab === 'settings'` render branch so the
+//      Sidebar's Settings footer button actually works
+//   4. Passed `user` to Settings (needed for profile display
+//      and password-change re-authentication)
 // ─────────────────────────────────────────────────────────────
 
-import { useState } from 'react';
-import { useSavings }          from './hooks/useSavings';
-import Sidebar                 from './components/Sidebar';
-import Dashboard               from './components/Dashboard';
-import TransactionHistory      from './components/TransactionHistory';
-import AIChat                  from './components/AIChat';
-import { supabase }            from './lib/supabaseClient';
-import { Sprout, Loader2 }     from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { Loader2 }           from 'lucide-react';
+import { useSavings }        from './hooks/useSavings';
+import Auth                  from './components/Auth';
+import Sidebar               from './components/Sidebar';
+import Dashboard             from './components/Dashboard';
+import TransactionHistory    from './components/TransactionHistory';
+import AIChat                from './components/AIChat';
 
-// ── Lazy-import heavier tabs (reduces initial bundle) ─────────
-import { lazy, Suspense } from 'react';
+// ── Lazy imports — loaded only when the user navigates there ──
+// This keeps the initial JS bundle small.
 const Goals    = lazy(() => import('./components/Goals'));
 const Insights = lazy(() => import('./components/Insights'));
+const Settings = lazy(() => import('./components/Settings'));
 
-// ── Simple loading spinner ────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Shared loading spinner
+// Used both as the Suspense fallback and the full-page data
+// loading state while useSavings fetches from Supabase.
+// ─────────────────────────────────────────────────────────────
 function Spinner({ label = 'Loading…' }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3 text-green-700">
-      <Loader2 size={32} className="animate-spin" />
-      <p className="text-sm font-semibold text-gray-500">{label}</p>
-    </div>
-  );
-}
-
-// ── Auth gate ─────────────────────────────────────────────────
-function AuthScreen() {
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [mode,     setMode]     = useState('login');   // 'login' | 'signup'
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const fn = mode === 'login'
-        ? supabase.auth.signInWithPassword({ email, password })
-        : supabase.auth.signUp({ email, password });
-
-      const { error: authError } = await fn;
-      if (authError) throw authError;
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F5F8F0] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#1F3D2B] flex items-center justify-center">
-            <Sprout size={24} className="text-[#C7E26E]" />
-          </div>
-          <h1 className="font-serif text-2xl text-[#1F3D2B]">Sprout</h1>
-          <p className="text-sm text-gray-400">Watch your savings grow</p>
-        </div>
-
-        {/* Toggle */}
-        <div className="flex bg-gray-100 rounded-xl p-1">
-          {['login', 'signup'].map((m) => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(''); }}
-              className={`flex-1 py-1.5 rounded-lg text-sm font-semibold capitalize transition-all ${mode === m ? 'bg-white text-[#1F3D2B] shadow-sm' : 'text-gray-400'}`}
-            >
-              {m === 'login' ? 'Sign in' : 'Sign up'}
-            </button>
-          ))}
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <label className="block">
-            <span className="text-xs text-gray-500 font-semibold">Email</span>
-            <input
-              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-            />
-          </label>
-          <label className="block">
-            <span className="text-xs text-gray-500 font-semibold">Password</span>
-            <input
-              type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-            />
-          </label>
-
-          {error && <p className="text-xs text-red-500 font-semibold">{error}</p>}
-
-          <button
-            type="submit" disabled={loading}
-            className="w-full bg-[#1F3D2B] text-[#C7E26E] font-bold py-2.5 rounded-xl text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
-            {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
+    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+      <div className="w-12 h-12 rounded-2xl bg-[#1F3D2B] flex items-center justify-center">
+        <Loader2 size={22} className="text-[#C7E26E] animate-spin" />
       </div>
+      <p className="text-sm font-semibold text-gray-400">{label}</p>
     </div>
   );
 }
 
-// ── Root App ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Root App
+// ─────────────────────────────────────────────────────────────
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
+  // ── All data and actions come from one hook ──
   const {
     user,
-    transactions, goals, settings,
-    balance, totalDeposited, totalWithdrawn,
-    monthNet, balanceSeries, monthlyData, categoryBreakdown,
-    loading, error,
-    addTransaction, removeTransaction,
-    addGoal, removeGoal,
+    transactions,
+    goals,
+    settings,
+    balance,
+    totalDeposited,
+    totalWithdrawn,
+    monthNet,
+    balanceSeries,
+    monthlyData,
+    categoryBreakdown,
+    loading,
+    error,
+    addTransaction,
+    removeTransaction,
+    addGoal,
+    removeGoal,
     updateSettings,
   } = useSavings();
 
-  if (!user && !loading) return <AuthScreen />;
-  if (loading)           return <Spinner label="Loading your savings…" />;
-  if (error)             return (
-    <div className="min-h-screen flex items-center justify-center text-red-500 text-sm font-semibold">
-      Error: {error}
-    </div>
-  );
+  // ── Auth gate ──
+  // While loading we show a spinner (not the auth screen) to avoid
+  // a flash of the login form on every hard refresh.
+  if (loading)          return <Spinner label="Loading your savings…" />;
+  if (!user)            return <Auth />;
 
+  // ── Unrecoverable error ──
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-lg font-serif text-[#1F3D2B]">Something went wrong</p>
+        <p className="text-sm text-red-500 font-semibold max-w-sm">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-secondary mt-2"
+        >
+          Reload page
+        </button>
+      </div>
+    );
+  }
+
+  // Derive the currency symbol from settings; fall back to ₱
   const currencySymbol = settings?.currency_symbol ?? '₱';
 
+  // ─────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen bg-[#F5F8F0] font-sans">
-      {/* Sidebar (desktop) / bottom nav (mobile) */}
+
+      {/* Sidebar — desktop left rail + mobile bottom bar */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         balance={balance}
         currencySymbol={currencySymbol}
-        userName={user?.email}
+        userName={user.email}
       />
 
-      {/* Main content area */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      {/* ── Main content ── */}
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-0 scrollbar-thin">
         <div className="max-w-3xl mx-auto px-4 py-6">
+
+          {/*
+            Suspense wraps ALL tabs because Goals, Insights, and Settings
+            are lazy. Dashboard, Transactions, and AIChat are eagerly
+            imported, so Suspense has zero cost when they're active.
+          */}
           <Suspense fallback={<Spinner />}>
+
             {activeTab === 'dashboard' && (
               <Dashboard
                 balance={balance}
@@ -166,6 +133,7 @@ export default function App() {
                 addTransaction={addTransaction}
               />
             )}
+
             {activeTab === 'transactions' && (
               <TransactionHistory
                 transactions={transactions}
@@ -173,6 +141,7 @@ export default function App() {
                 removeTransaction={removeTransaction}
               />
             )}
+
             {activeTab === 'goals' && (
               <Goals
                 goals={goals}
@@ -183,6 +152,7 @@ export default function App() {
                 addTransaction={addTransaction}
               />
             )}
+
             {activeTab === 'insights' && (
               <Insights
                 balanceSeries={balanceSeries}
@@ -194,6 +164,7 @@ export default function App() {
                 totalWithdrawn={totalWithdrawn}
               />
             )}
+
             {activeTab === 'assistant' && (
               <AIChat
                 balance={balance}
@@ -207,6 +178,22 @@ export default function App() {
                 updateSettings={updateSettings}
               />
             )}
+
+            {/*
+              ── Settings tab ──
+              Routed to by Sidebar's footer "Settings" button.
+              Receives `user` for profile display + password re-auth,
+              `settings` for the current values, and `updateSettings`
+              to write changes back to Supabase.
+            */}
+            {activeTab === 'settings' && (
+              <Settings
+                user={user}
+                settings={settings}
+                updateSettings={updateSettings}
+              />
+            )}
+
           </Suspense>
         </div>
       </main>
