@@ -14,7 +14,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Sprout, User, Settings, Eye, EyeOff, Trash2 } from 'lucide-react';
-import { streamGemini, buildFinancialContext, GeminiError } from '../services/geminiService';
+import { streamGemini, buildFinancialContext, GeminiError } from '../lib/geminiService';
 
 // Suggested prompts shown in empty state
 const SUGGESTIONS = [
