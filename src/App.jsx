@@ -117,11 +117,14 @@ export default function App() {
             transactions={transactions} 
             goals={computedGoals}
             currencySymbol={activeCurrency}
+            settings={settings}
+            updateSettings={updateSettings}
           />
         );
       case 'settings':
         return (
           <Settings 
+            user={user}
             settings={settings} 
             updateSettings={updateSettings}
           />
