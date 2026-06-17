@@ -6,12 +6,12 @@
 
 import { useState } from 'react';
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer
+  AreaChart, Area,
+  ResponsiveContainer
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle,
-  Target, Plus, Leaf, Sun, Wallet
+  Target, Plus, Leaf, Sun,
 } from 'lucide-react';
 
 const TX_CATEGORIES = [
@@ -75,34 +75,27 @@ function VineProgress({ percent }) {
  * @param {{
  *   balance: number, totalDeposited: number, totalWithdrawn: number,
  *   monthNet: number, balanceSeries: Array, goals: Array,
- *   transactions: Array, currencySymbol: string,
- *   addTransaction: Function
+ *   currencySymbol: string, addTransaction: Function
  * }} props
  */
 export default function Dashboard({
   balance, totalDeposited, totalWithdrawn,
-  monthNet, balanceSeries, goals, transactions,
+  monthNet, balanceSeries, goals,
   currencySymbol = '₱', addTransaction,
 }) {
   const [type,     setType]     = useState('deposit');
   const [amount,   setAmount]   = useState('');
   const [category, setCategory] = useState(TX_CATEGORIES[0]);
   const [note,     setNote]     = useState('');
-  const [date,     setDate]     = useState(today());
   const [goalId,   setGoalId]   = useState('');
   const [saving,   setSaving]   = useState(false);
   const [formErr,  setFormErr]  = useState('');
-
-  const recentTx = [...transactions]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 5);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setFormErr('');
     const n = parseFloat(amount);
     if (!n || n <= 0) { setFormErr('Enter a valid amount.'); return; }
-    if (!date)        { setFormErr('Pick a date.');          return; }
 
     setSaving(true);
     try {
@@ -111,13 +104,12 @@ export default function Dashboard({
         amount:   n,
         category,
         note:     note.trim() || null,
-        date,
-        goal_id:  goalId || null,
+        date:     today(),
+        goal_id:  type === 'deposit' ? (goalId || null) : null,
       });
       setAmount('');
       setNote('');
       setGoalId('');
-      setDate(today());
     } catch (err) {
       setFormErr(err.message);
     } finally {
@@ -192,23 +184,14 @@ export default function Dashboard({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs text-gray-500 font-semibold">Amount</span>
-                <input
-                  type="number" min="0" step="0.01" placeholder="0.00"
-                  value={amount} onChange={(e) => setAmount(e.target.value)} required
-                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs text-gray-500 font-semibold">Date</span>
-                <input
-                  type="date" value={date} onChange={(e) => setDate(e.target.value)} required
-                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-                />
-              </label>
-            </div>
+            <label className="block">
+              <span className="text-xs text-gray-500 font-semibold">Amount</span>
+              <input
+                type="number" min="0" step="0.01" placeholder="0.00"
+                value={amount} onChange={(e) => setAmount(e.target.value)} required
+                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+              />
+            </label>
 
             <label className="block">
               <span className="text-xs text-gray-500 font-semibold">Category</span>
@@ -220,7 +203,7 @@ export default function Dashboard({
               </select>
             </label>
 
-            {goals.length > 0 && (
+            {type === 'deposit' && goals.length > 0 && (
               <label className="block">
                 <span className="text-xs text-gray-500 font-semibold">Allocate to goal (optional)</span>
                 <select
@@ -282,37 +265,6 @@ export default function Dashboard({
             </ul>
           )}
         </div>
-      </div>
-
-      {/* ── Recent transactions ── */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-        <h2 className="font-serif text-lg text-[#1F3D2B] mb-4">Recent activity</h2>
-        {recentTx.length === 0 ? (
-          <div className="flex flex-col items-center py-8 text-gray-400 text-sm">
-            <Wallet size={26} className="mb-2 text-green-300" />
-            No transactions logged yet.
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-50">
-            {recentTx.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 py-3">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${t.type === 'deposit' ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                  {t.type === 'deposit'
-                    ? <ArrowUpCircle size={18} className="text-green-700" />
-                    : <ArrowDownCircle size={18} className="text-yellow-700" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{t.category}{t.goals?.name ? ` · ${t.goals.name}` : ''}</p>
-                  <p className="text-xs text-gray-400">{t.date}{t.note ? ` — ${t.note}` : ''}</p>
-                </div>
-                <p className={`font-mono font-bold text-sm shrink-0 ${t.type === 'deposit' ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {t.type === 'deposit' ? '+' : '−'}{fmt(t.amount, currencySymbol)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
