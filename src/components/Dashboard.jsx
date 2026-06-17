@@ -193,28 +193,48 @@ export default function Dashboard({
               />
             </label>
 
-            <label className="block">
-              <span className="text-xs text-gray-500 font-semibold">Category</span>
-              <select
-                value={category} onChange={(e) => setCategory(e.target.value)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                          <div
+                className={`grid gap-3 ${
+                  type === 'deposit' && goals.length > 0
+                    ? 'grid-cols-1 sm:grid-cols-2'
+                    : 'grid-cols-1'
+                }`}
               >
-                {TX_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </label>
+                {/* Category */}
+                <label className="block">
+                  <span className="text-xs text-gray-500 font-semibold">Category</span>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                  >
+                    {TX_CATEGORIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </label>
 
-            {type === 'deposit' && goals.length > 0 && (
-              <label className="block">
-                <span className="text-xs text-gray-500 font-semibold">Allocate to goal (optional)</span>
-                <select
-                  value={goalId} onChange={(e) => setGoalId(e.target.value)}
-                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-                >
-                  <option value="">None</option>
-                  {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-              </label>
-            )}
+                {/* Goal Allocation */}
+                {type === 'deposit' && goals.length > 0 && (
+                  <label className="block">
+                    <span className="text-xs text-gray-500 font-semibold">
+                      Allocate to goal (optional)
+                    </span>
+                    <select
+                      value={goalId}
+                      onChange={(e) => setGoalId(e.target.value)}
+                      className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                    >
+                      <option value="">None</option>
+                      {goals.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
 
             <label className="block">
               <span className="text-xs text-gray-500 font-semibold">Note (optional)</span>
