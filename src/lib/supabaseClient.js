@@ -42,13 +42,16 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // ─────────────────────────────────────────────────────────────
 
 /** Fetch all transactions for the currently-authenticated user. */
-export async function fetchTransactions() {
+export async function fetchTransactions(userId) {
+  if (!userId) return []; // Safety check
+  
   const { data, error } = await supabase
     .from('transactions')
     .select(`
       id, type, amount, category, note, date, goal_id, created_at,
       goals ( id, name )
     `)
+    .eq('user_id', userId) // ⭐ Limits results to the logged-in user
     .order('date',       { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -57,10 +60,13 @@ export async function fetchTransactions() {
 }
 
 /** Fetch all goals (with computed progress) for the current user. */
-export async function fetchGoals() {
+export async function fetchGoals(userId) {
+  if (!userId) return []; // Safety check
+  
   const { data, error } = await supabase
     .from('goal_progress')  // use the DB view — progress is pre-computed
     .select('*')
+    .eq('user_id', userId) // ⭐ Limits results to the logged-in user
     .order('created_at', { ascending: true });
 
   if (error) throw error;

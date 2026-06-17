@@ -97,10 +97,10 @@ export function useSavings() {
       setLoading(true);
       setError(null);
       try {
-        // Fetch in parallel — don't await sequentially
+        // Fetch in parallel — passing user.id securely to isolate data rows
         const [txData, goalsData, settingsData] = await Promise.all([
-          fetchTransactions(),
-          fetchGoals(),
+          fetchTransactions(user.id),
+          fetchGoals(user.id),
           fetchOrCreateSettings(user.id),
         ]);
 
@@ -145,8 +145,8 @@ export function useSavings() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          // Transactions changed → also refresh goals (progress view uses a JOIN)
-          Promise.all([fetchTransactions(), fetchGoals()])
+          // Transactions changed → refresh transactions and goals filtered by user.id
+          Promise.all([fetchTransactions(user.id), fetchGoals(user.id)])
             .then(([txData, goalsData]) => {
               setTransactions(txData   ?? []);
               setGoals(goalsData       ?? []);
@@ -167,7 +167,7 @@ export function useSavings() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          fetchGoals()
+          fetchGoals(user.id)
             .then((goalsData) => setGoals(goalsData ?? []))
             .catch((err) => console.error('[useSavings] Realtime goals sync failed:', err));
         }
@@ -258,10 +258,10 @@ export function useSavings() {
   // ─────────────────────────────────────────────────────────
   // 5. Action helpers — all optimistic
   //    Pattern for every action:
-  //      a) Build a temp row and apply it to local state immediately
-  //      b) Call Supabase
-  //      c) On success: replace temp row with the real DB row
-  //      d) On error:  roll back, re-throw so the UI can show the error
+  //       a) Build a temp row and apply it to local state immediately
+  //       b) Call Supabase
+  //       c) On success: replace temp row with the real DB row
+  //       d) On error:  roll back, re-throw so the UI can show the error
   // ─────────────────────────────────────────────────────────
 
   /** Add a deposit or withdrawal. `payload` omits `user_id` (added here). */
@@ -291,8 +291,8 @@ export function useSavings() {
           prev.map((t) => (t.id === tempRow.id ? { ...saved, goals: tempRow.goals } : t))
         );
 
-        // Refresh goals so progress percentages update
-        fetchGoals()
+        // Refresh goals so progress percentages update (filtered by user.id)
+        fetchGoals(user.id)
           .then((goalsData) => setGoals(goalsData ?? []))
           .catch(console.error);
 
@@ -317,8 +317,8 @@ export function useSavings() {
       try {
         await dbDeleteTransaction(id);
 
-        // Refresh goal progress after a transaction is deleted
-        fetchGoals()
+        // Refresh goal progress after a transaction is deleted (filtered by user.id)
+        fetchGoals(user.id)
           .then((goalsData) => setGoals(goalsData ?? []))
           .catch(console.error);
       } catch (err) {
@@ -329,7 +329,7 @@ export function useSavings() {
         throw err;
       }
     },
-    [transactions]
+    [transactions, user]
   );
 
   /** Create a new savings goal. `payload` omits `user_id`. */
