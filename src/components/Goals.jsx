@@ -370,7 +370,61 @@ export default function Goals({
         </div>
       )}
 
-      {/* ── Create goal form ── */}
+      {/* ── Goal list ── */}
+      {goals.length === 0 ? (
+        <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-3">
+            <Target size={26} className="text-green-400" />
+          </div>
+          <p className="font-serif text-lg text-[#1F3D2B]">No goals planted yet</p>
+          <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">
+            Set a target and a date below, then water it with deposits to watch it grow.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Filter tabs */}
+          <div className="flex gap-2">
+            {[
+              { value: 'all',       label: `All (${goals.length})` },
+              { value: 'active',    label: 'In progress' },
+              { value: 'completed', label: `Done (${completedCount})` },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setFilter(value)}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                  filter === value
+                    ? 'bg-[#1F3D2B] text-[#C7E26E] border-[#1F3D2B]'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-center text-gray-400 text-sm py-8">
+              No {filter} goals found.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filtered.map((g) => (
+                <GoalCard
+                  key={g.id}
+                  g={g}
+                  currencySymbol={currencySymbol}
+                  removeGoal={removeGoal}
+                  addTransaction={addTransaction}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Create goal form (Moved to Bottom) ── */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
         <h2 className="font-serif text-xl text-[#1F3D2B] mb-4 flex items-center gap-2">
           <Plus size={18} className="text-[#4F7E5B]" /> New savings goal
@@ -437,59 +491,6 @@ export default function Goals({
         </form>
       </div>
 
-      {/* ── Goal list ── */}
-      {goals.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-3">
-            <Target size={26} className="text-green-400" />
-          </div>
-          <p className="font-serif text-lg text-[#1F3D2B]">No goals planted yet</p>
-          <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">
-            Set a target and a date above, then water it with deposits to watch it grow.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Filter tabs */}
-          <div className="flex gap-2">
-            {[
-              { value: 'all',       label: `All (${goals.length})` },
-              { value: 'active',    label: 'In progress' },
-              { value: 'completed', label: `Done (${completedCount})` },
-            ].map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setFilter(value)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                  filter === value
-                    ? 'bg-[#1F3D2B] text-[#C7E26E] border-[#1F3D2B]'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {filtered.length === 0 ? (
-            <div className="text-center text-gray-400 text-sm py-8">
-              No {filter} goals found.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filtered.map((g) => (
-                <GoalCard
-                  key={g.id}
-                  g={g}
-                  currencySymbol={currencySymbol}
-                  removeGoal={removeGoal}
-                  addTransaction={addTransaction}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
