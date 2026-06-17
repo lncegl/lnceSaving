@@ -1,11 +1,5 @@
 {
   "name": "lncesaving-v1",
   "compatibility_date": "2024-01-01",
-  "pages_build_output_dir": "./dist",
-  "build": {
-    "environment": {
-      "VITE_SUPABASE_URL": "https://ceypyxqwsuxspzsvmcxz.supabase.co",
-      "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNleXB5eHF3c3V4c3B6c3ZtY3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NjM1OTAsImV4cCI6MjA5NzIzOTU5MH0.anH8-S9_XY0xOoliVl4U_6s50_ialFfHmZxqT24qAjE"
-    }
-  }
+  "pages_build_output_dir": "./dist"
 }
