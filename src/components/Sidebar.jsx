@@ -32,13 +32,19 @@ export default function Sidebar({ activeTab, setActiveTab, balance, currencySymb
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex flex-col w-64 min-h-screen bg-[#1F3D2B] text-white px-4 py-6 shrink-0">
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 px-2">
-          <div className="w-9 h-9 rounded-xl bg-[#C7E26E] flex items-center justify-center shrink-0">
+        {/* Clickable Logo and Name */}
+        <div 
+          onClick={() => setActiveTab('dashboard')}
+          className="flex items-center gap-3 mb-8 px-2 cursor-pointer group select-none"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab('dashboard'); }}
+        >
+          <div className="w-9 h-9 rounded-xl bg-[#C7E26E] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
             <Sprout size={20} className="text-[#1F3D2B]" />
           </div>
           <div>
-            <p className="font-serif text-lg font-semibold leading-none">Sprout</p>
+            <p className="font-serif text-lg font-semibold leading-none group-hover:text-[#C7E26E] transition-colors">Sprout</p>
             <p className="text-xs text-[#8FBF6F] mt-0.5">Savings Tracker</p>
           </div>
         </div>
