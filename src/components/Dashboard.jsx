@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 
 const TX_CATEGORIES = [
-  'Salary','Allowance','Gift','Freelance',
+  'Other','Salary','Allowance','Gift','Freelance',
   'Groceries','Bills','Transport','Entertainment',
-  'Health','Savings Transfer','Other',
+  'Health','Savings Transfer',
 ];
 
 // ─── tiny helpers ───────────────────────────────────────────
