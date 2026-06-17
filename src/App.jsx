@@ -134,14 +134,6 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'transactions' && (
-              <TransactionHistory
-                transactions={transactions}
-                currencySymbol={currencySymbol}
-                removeTransaction={removeTransaction}
-              />
-            )}
-
             {activeTab === 'goals' && (
               <Goals
                 goals={goals}
@@ -150,6 +142,14 @@ export default function App() {
                 addGoal={addGoal}
                 removeGoal={removeGoal}
                 addTransaction={addTransaction}
+              />
+            )}
+
+            {activeTab === 'transactions' && (
+              <TransactionHistory
+                transactions={transactions}
+                currencySymbol={currencySymbol}
+                removeTransaction={removeTransaction}
               />
             )}
 
