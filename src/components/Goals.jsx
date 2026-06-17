@@ -1,21 +1,10 @@
 // src/components/Goals.jsx
-// ─────────────────────────────────────────────────────────────
-// Props (from App.jsx):
-//   goals           – Array  – rows from goal_progress DB view
-//   transactions    – Array  – all user transactions
-//   currencySymbol  – string
-//   addGoal         – async (payload) => savedGoal
-//   removeGoal      – async (id) => void
-//   addTransaction  – async (payload) => savedTx
-// ─────────────────────────────────────────────────────────────
-
 import { useState } from 'react';
 import {
   Target, Plus, Trash2, Leaf, Sun, CalendarDays,
-  TrendingUp, AlertCircle, CheckCircle2, Clock,
+  TrendingUp, AlertCircle, CheckCircle2, Clock, Info, AlertTriangle
 } from 'lucide-react';
 
-// ── Formatting helpers ───────────────────────────────────────
 function fmt(n, symbol = '₱') {
   return (
     symbol +
@@ -47,14 +36,12 @@ function daysUntil(dateStr) {
   return Math.ceil((target - now) / 86_400_000);
 }
 
-// How much the user needs to save per day to hit the goal in time
 function dailySavingsNeeded(remaining, dateStr) {
   const days = daysUntil(dateStr);
   if (!days || days <= 0 || remaining <= 0) return null;
   return remaining / days;
 }
 
-// ── VineProgress ─────────────────────────────────────────────
 function VineProgress({ percent }) {
   const p         = Math.min(100, Math.max(0, Number(percent) || 0));
   const leafStops = [12, 28, 46, 64, 82].filter((s) => s <= p);
@@ -83,7 +70,6 @@ function VineProgress({ percent }) {
   );
 }
 
-// ── StatusPill ───────────────────────────────────────────────
 function StatusPill({ days, percent }) {
   if (percent >= 100)
     return (
@@ -116,25 +102,42 @@ function StatusPill({ days, percent }) {
   );
 }
 
-// ── QuickDeposit ─────────────────────────────────────────────
-function QuickDeposit({ goalId, goalName, addTransaction, currencySymbol }) {
-  const [amount,  setAmount]  = useState('');
-  const [note,    setNote]    = useState('');
-  const [saving,  setSaving]  = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [err,     setErr]     = useState('');
+function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, addTransaction, currencySymbol }) {
+  const [amount,            setAmount]          = useState('');
+  const [note,            setNote]            = useState('');
+  const [actionType,      setActionType]      = useState('deposit'); 
+  const [saving,          setSaving]          = useState(false);
+  const [success,         setSuccess]         = useState(false);
+  const [err,             setErr]             = useState('');
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
-  async function handleAdd() {
+  const remainingToGoal = Math.max(0, targetAmount - savedAmount);
+  const inputNum = parseFloat(amount) || 0;
+  const newBalanceAfterWithdrawal = balance - savedAmount;
+
+  async function handleDeposit() {
     const n = parseFloat(amount);
-    if (!n || n <= 0) { setErr('Enter a valid amount.'); return; }
+    if (!n || n <= 0) { 
+      setErr('Enter a valid amount to deposit.'); 
+      return; 
+    }
+    if (n > balance) {
+      setErr(`Insufficient funds. Your available main balance is ${fmt(balance, currencySymbol)}.`);
+      return;
+    }
+    if (n > remainingToGoal) {
+      setErr(`Deposit exceeds target cap. You only need ${fmt(remainingToGoal, currencySymbol)} to complete this goal.`);
+      return;
+    }
+
     setSaving(true);
     setErr('');
     try {
       await addTransaction({
-        type:     'deposit',
+        type:     'deposit', 
         amount:   n,
-        category: 'Savings Transfer',
-        note:     note.trim() || null,
+        category: 'Savings Transfer', 
+        note:     note.trim() || `Allocated fund to ${goalName}`,
         date:     today(),
         goal_id:  goalId,
       });
@@ -149,49 +152,196 @@ function QuickDeposit({ goalId, goalName, addTransaction, currencySymbol }) {
     }
   }
 
+  async function confirmWithdrawal() {
+    setShowWarningModal(false);
+    setSaving(true);
+    setErr('');
+    try {
+      await addTransaction({
+        type:     'withdrawal', 
+        amount:   savedAmount,
+        category: 'Goal Liquidation',
+        note:     `Withdrew remaining vault holdings from ${goalName}`,
+        date:     today(),
+        goal_id:  goalId,
+      });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2500);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="mt-4 pt-4 border-t border-gray-100">
-      <p className="text-xs font-semibold text-gray-500 mb-2">Add savings toward this goal</p>
-      <div className="flex gap-2">
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) => { setAmount(e.target.value); setErr(''); }}
-          className="w-28 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-        />
-        <input
-          type="text"
-          placeholder="Note (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-        />
+    <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+      <div className="flex gap-2 text-xs">
         <button
-          onClick={handleAdd}
-          disabled={saving}
-          className="bg-[#1F3D2B] text-[#C7E26E] px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
+          type="button"
+          onClick={() => { setActionType('deposit'); setErr(''); }}
+          className={`px-3 py-1.5 rounded-lg font-semibold border transition-all ${
+            actionType === 'deposit'
+              ? 'bg-green-50 text-[#1F3D2B] border-green-200'
+              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+          }`}
         >
-          {saving ? '…' : 'Add'}
+          ↑ Deposit to Goal
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActionType('withdraw'); setErr(''); }}
+          className={`px-3 py-1.5 rounded-lg font-semibold border transition-all ${
+            actionType === 'withdraw'
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+          }`}
+        >
+          ↓ Withdraw Total
         </button>
       </div>
+
+      {actionType === 'deposit' ? (
+        <div className="space-y-3">
+          {remainingToGoal <= 0 ? (
+            <p className="text-xs text-green-700 font-semibold bg-green-50 border border-green-100 rounded-xl p-2.5">
+              🎉 This goal is fully funded! Maximum cap of {fmt(targetAmount, currencySymbol)} achieved.
+            </p>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <div className="relative w-28 shrink-0">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setErr(''); }}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Note (optional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                />
+                <button
+                  type="button"
+                  onClick={handleDeposit}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-[#1F3D2B] text-[#C7E26E] disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
+                >
+                  {saving ? '…' : '↑ Add'}
+                </button>
+              </div>
+
+              {inputNum > 0 && !err && (
+                <div className="flex items-start gap-2 bg-green-50 border border-green-100 rounded-xl p-2.5 text-xs text-green-800">
+                  <Info size={14} className="mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold">Goal Progress Allocation:</p>
+                    <p className="mt-0.5">Depositing <span className="font-mono font-bold">{fmt(inputNum, currencySymbol)}</span> here increases this goal's status without affecting your main balance.</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="text-xs text-amber-900">
+            <p className="font-semibold">Liquidate entire growth reserve amount:</p>
+            <p className="text-gray-500 mt-0.5">Ready to withdraw structural vault holdings of <span className="font-mono font-bold text-amber-800">{fmt(savedAmount, currencySymbol)}</span>.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { 
+              if (savedAmount <= 0) {
+                setErr('This goal holds no funds. There is nothing to withdraw.');
+                return;
+              }
+              setErr(''); 
+              setShowWarningModal(true); 
+            }}
+            disabled={saving}
+            className="px-4 py-2 bg-amber-700 text-white rounded-xl text-sm font-bold hover:bg-amber-800 disabled:opacity-40 transition-colors shrink-0 flex items-center justify-center gap-1.5"
+          >
+            {saving ? 'Processing…' : `↓ Withdraw ${fmt(savedAmount, currencySymbol)}`}
+          </button>
+        </div>
+      )}
+
+      {/* WARNING MODAL POPUP */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white border border-amber-200 rounded-2xl max-w-md w-full p-6 shadow-xl text-left">
+            <div className="flex items-center gap-3 text-amber-600 mb-3">
+              <div className="p-2 bg-amber-50 rounded-xl">
+                <AlertTriangle size={24} />
+              </div>
+              <h4 className="text-lg font-serif font-bold text-gray-900">Confirm Goal Withdrawal</h4>
+            </div>
+            
+            <p className="text-sm text-gray-600 leading-relaxed">
+              You are about to withdraw <span className="font-mono font-bold text-amber-800">{fmt(savedAmount, currencySymbol)}</span> from your <span className="font-bold">"{goalName}"</span> milestone pool.
+            </p>
+
+            <div className="my-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-500">
+                <span>Current Main Wallet Balance:</span>
+                <span className="font-mono font-semibold">{fmt(balance, currencySymbol)}</span>
+              </div>
+              <div className="flex justify-between text-amber-700 font-semibold">
+                <span>Deduction Amount:</span>
+                <span className="font-mono">- {fmt(savedAmount, currencySymbol)}</span>
+              </div>
+              <div className="h-px bg-gray-200 my-1" />
+              <div className="flex justify-between text-gray-900 font-bold text-sm">
+                <span>New Main Balance After:</span>
+                <span className="font-mono text-[#1F3D2B]">{fmt(newBalanceAfterWithdrawal, currencySymbol)}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-red-500 bg-red-50 p-2.5 rounded-xl border border-red-100">
+              ⚠️ Warning: This action will deduct funds directly from your main dashboard savings balance card.
+            </p>
+
+            <div className="mt-5 flex gap-2.5 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowWarningModal(false)}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmWithdrawal}
+                className="px-5 py-2 bg-amber-700 text-white rounded-xl text-sm font-bold hover:bg-amber-800 transition-colors shadow-sm"
+              >
+                Yes, Deduct and Withdraw
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {err     && <p className="text-xs text-red-500 font-semibold mt-1.5">{err}</p>}
       {success && (
         <p className="text-xs text-green-700 font-semibold mt-1.5 flex items-center gap-1">
-          <CheckCircle2 size={12} /> Saved! Great work 🌱
+          <CheckCircle2 size={12} /> Action executed successfully!
         </p>
       )}
     </div>
   );
 }
 
-// ── GoalCard ──────────────────────────────────────────────────
-function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
+function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting,   setDeleting]   = useState(false);
-  const [expanded,   setExpanded]   = useState(false);
 
   const saved     = Number(g.saved_amount   ?? 0);
   const target    = Number(g.target_amount  ?? 0);
@@ -208,7 +358,6 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-      {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-serif text-lg text-[#1F3D2B] leading-snug truncate">{g.name}</h3>
@@ -222,6 +371,7 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
           <StatusPill days={days} percent={percent} />
           {!confirming && (
             <button
+              type="button"
               onClick={() => setConfirming(true)}
               className="text-gray-300 hover:text-red-400 transition-colors p-1"
               aria-label="Delete goal"
@@ -232,11 +382,11 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
         </div>
       </div>
 
-      {/* Delete confirm */}
       {confirming && (
         <div className="mt-3 flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
           <p className="text-xs text-red-700 font-semibold flex-1">Delete "{g.name}"? This can't be undone.</p>
           <button
+            type="button"
             onClick={handleDelete}
             disabled={deleting}
             className="text-xs font-bold text-white bg-red-500 px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50"
@@ -244,6 +394,7 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
             {deleting ? '…' : 'Delete'}
           </button>
           <button
+            type="button"
             onClick={() => setConfirming(false)}
             className="text-xs font-bold text-gray-500 hover:text-gray-700"
           >
@@ -252,7 +403,6 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
         </div>
       )}
 
-      {/* Progress */}
       <div className="mt-3">
         <div className="flex justify-between items-baseline mb-0.5">
           <span className="font-mono font-bold text-[#1F3D2B] text-sm">{fmt(saved, currencySymbol)}</span>
@@ -265,7 +415,6 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
         </div>
       </div>
 
-      {/* Insight strip */}
       {daily && remaining > 0 && (
         <div className="mt-3 flex items-center gap-2 bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2">
           <TrendingUp size={14} className="text-green-700 shrink-0" />
@@ -283,37 +432,34 @@ function GoalCard({ g, currencySymbol, removeGoal, addTransaction }) {
         </div>
       )}
 
-      {/* Quick deposit */}
-      {percent < 100 && (
-        <QuickDeposit
-          goalId={g.id}
-          goalName={g.name}
-          addTransaction={addTransaction}
-          currencySymbol={currencySymbol}
-        />
-      )}
+      <QuickActions
+        goalId={g.id}
+        goalName={g.name}
+        savedAmount={saved}
+        targetAmount={target}
+        balance={balance}
+        addTransaction={addTransaction}
+        currencySymbol={currencySymbol}
+      />
     </div>
   );
 }
 
-// ── Main Goals Component ──────────────────────────────────────
 export default function Goals({
-  goals,
-  transactions,
+  balance = 0,
+  goals = [],
+  transactions = [],
   currencySymbol = '₱',
   addGoal,
   removeGoal,
   addTransaction,
 }) {
-  // Form state
   const [name,       setName]       = useState('');
   const [targetAmt,  setTargetAmt]  = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [saving,     setSaving]     = useState(false);
   const [formErr,    setFormErr]    = useState('');
-
-  // Filter
-  const [filter, setFilter] = useState('all'); // 'all' | 'active' | 'completed'
+  const [filter,     setFilter]     = useState('all');
 
   const filtered = goals.filter((g) => {
     const pct = Number(g.progress_percent ?? 0);
@@ -322,8 +468,6 @@ export default function Goals({
     return true;
   });
 
-  // Aggregate stats
-  const totalTarget = goals.reduce((s, g) => s + Number(g.target_amount ?? 0), 0);
   const totalSaved  = goals.reduce((s, g) => s + Number(g.saved_amount  ?? 0), 0);
   const completedCount = goals.filter((g) => Number(g.progress_percent ?? 0) >= 100).length;
 
@@ -353,8 +497,6 @@ export default function Goals({
 
   return (
     <div className="space-y-6">
-
-      {/* ── Summary bar ── */}
       {goals.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -370,7 +512,6 @@ export default function Goals({
         </div>
       )}
 
-      {/* ── Goal list ── */}
       {goals.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm">
           <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-3">
@@ -383,7 +524,6 @@ export default function Goals({
         </div>
       ) : (
         <>
-          {/* Filter tabs */}
           <div className="flex gap-2">
             {[
               { value: 'all',       label: `All (${goals.length})` },
@@ -392,6 +532,7 @@ export default function Goals({
             ].map(({ value, label }) => (
               <button
                 key={value}
+                type="button"
                 onClick={() => setFilter(value)}
                 className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
                   filter === value
@@ -404,27 +545,21 @@ export default function Goals({
             ))}
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="text-center text-gray-400 text-sm py-8">
-              No {filter} goals found.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filtered.map((g) => (
-                <GoalCard
-                  key={g.id}
-                  g={g}
-                  currencySymbol={currencySymbol}
-                  removeGoal={removeGoal}
-                  addTransaction={addTransaction}
-                />
-              ))}
-            </div>
-          )}
+          <div className="space-y-4">
+            {filtered.map((g) => (
+              <GoalCard
+                key={g.id}
+                g={g}
+                balance={balance}
+                currencySymbol={currencySymbol}
+                removeGoal={removeGoal}
+                addTransaction={addTransaction}
+              />
+            ))}
+          </div>
         </>
       )}
 
-      {/* ── Create goal form (Moved to Bottom) ── */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
         <h2 className="font-serif text-xl text-[#1F3D2B] mb-4 flex items-center gap-2">
           <Plus size={18} className="text-[#4F7E5B]" /> New savings goal
@@ -486,11 +621,10 @@ export default function Goals({
             className="w-full bg-[#1F3D2B] text-[#C7E26E] font-bold py-2.5 rounded-xl text-sm hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
           >
             <Leaf size={15} />
-            {saving ? 'Planting goal…' : 'Plant this goal'}
+            {saving ? 'Planting goal…' : '↑ Plant this goal'}
           </button>
         </form>
       </div>
-
     </div>
   );
 }

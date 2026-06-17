@@ -1,23 +1,8 @@
 // src/components/Auth.jsx
-// ─────────────────────────────────────────────────────────────
-// Full-page authentication gate.
-// Rendered by App.jsx when `user` is null.
-//
-// Three modes (local state machine):
-//   'login'   → sign in with email + password
-//   'signup'  → create account (email + password + confirm)
-//   'forgot'  → send a password-reset email
-//
-// On successful sign-in / sign-up Supabase's onAuthStateChange
-// fires in useSavings.js, sets `user`, and App.jsx swaps to the
-// main layout automatically — no navigation needed here.
-// ─────────────────────────────────────────────────────────────
-
 import { useState } from 'react';
 import { Sprout, Eye, EyeOff, Leaf, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-// ── Password strength helpers ─────────────────────────────────
 function getPasswordStrength(pw) {
   if (!pw) return { score: 0, label: '', color: '' };
   let score = 0;
@@ -37,7 +22,6 @@ function getPasswordStrength(pw) {
   return { score, ...levels[score] };
 }
 
-// ── PasswordInput — reusable show/hide field ──────────────────
 function PasswordInput({ value, onChange, placeholder = 'Password', id, autoComplete }) {
   const [show, setShow] = useState(false);
   return (
@@ -51,7 +35,7 @@ function PasswordInput({ value, onChange, placeholder = 'Password', id, autoComp
         autoComplete={autoComplete ?? 'current-password'}
         required
         minLength={6}
-        className="field-input pr-10"
+        className="field-input pr-10 w-full p-2.5 border border-gray-200 rounded-xl"
       />
       <button
         type="button"
@@ -65,7 +49,6 @@ function PasswordInput({ value, onChange, placeholder = 'Password', id, autoComp
   );
 }
 
-// ── Logo mark ─────────────────────────────────────────────────
 function LogoMark() {
   return (
     <div className="flex flex-col items-center gap-2 select-none">
@@ -73,14 +56,13 @@ function LogoMark() {
         <Sprout size={28} className="text-[#C7E26E]" />
       </div>
       <div className="text-center">
-        <h1 className="font-serif text-2xl text-[#1F3D2B] leading-none">Sprout</h1>
+        <h1 className="font-serif text-2xl text-[#1F3D2B] leading-none font-bold">Sprout</h1>
         <p className="text-xs text-gray-400 mt-0.5 font-medium">Watch your savings grow</p>
       </div>
     </div>
   );
 }
 
-// ── Mode toggle tabs ──────────────────────────────────────────
 function ModeTabs({ mode, setMode }) {
   return (
     <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
@@ -105,9 +87,6 @@ function ModeTabs({ mode, setMode }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Login form
-// ─────────────────────────────────────────────────────────────
 function LoginForm({ onForgot }) {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -115,15 +94,17 @@ function LoginForm({ onForgot }) {
   const [error,    setError]    = useState('');
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e.preventDefault(); // Prevents standard HTML page reload loops
     setError('');
     setLoading(true);
+    
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("📬 Sending authentication payload to client instance...");
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
-      // Success — App.jsx re-renders via onAuthStateChange in useSavings
+      console.log("🎉 Session assigned successfully in LoginForm context.");
     } catch (err) {
-      // Map common Supabase error messages to friendlier copy
+      console.error("❌ Sign in transaction error details:", err);
       const msg = err.message ?? '';
       if (msg.toLowerCase().includes('invalid login credentials')) {
         setError('Email or password is incorrect. Please try again.');
@@ -140,7 +121,7 @@ function LoginForm({ onForgot }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="space-y-1">
-        <label htmlFor="login-email" className="field-label">Email address</label>
+        <label htmlFor="login-email" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Email address</label>
         <input
           id="login-email"
           type="email"
@@ -149,13 +130,13 @@ function LoginForm({ onForgot }) {
           placeholder="you@example.com"
           autoComplete="email"
           required
-          className="field-input"
+          className="field-input w-full p-2.5 border border-gray-200 rounded-xl"
         />
       </div>
 
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label htmlFor="login-password" className="field-label">Password</label>
+          <label htmlFor="login-password" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Password</label>
           <button
             type="button"
             onClick={onForgot}
@@ -174,16 +155,16 @@ function LoginForm({ onForgot }) {
       </div>
 
       {error && (
-        <div className="alert-error">
+        <div className="alert-error p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex gap-2">
           <AlertCircle size={14} className="shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
-      <button type="submit" disabled={loading} className="btn-primary mt-2">
+      <button type="submit" disabled={loading} className="btn-primary mt-2 w-full py-2.5 bg-[#1F3D2B] text-white rounded-xl font-bold transition-all hover:bg-[#152a1e] disabled:opacity-50">
         {loading ? (
-          <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
+          <span className="flex items-center justify-center gap-2">
+            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
             Signing in…
           </span>
         ) : 'Sign in'}
@@ -192,9 +173,6 @@ function LoginForm({ onForgot }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Sign-up form
-// ─────────────────────────────────────────────────────────────
 function SignupForm() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -229,7 +207,6 @@ function SignupForm() {
     }
   }
 
-  // Success state — waiting for email confirmation
   if (done) {
     return (
       <div className="text-center space-y-4 py-2">
@@ -237,7 +214,7 @@ function SignupForm() {
           <CheckCircle2 size={28} className="text-green-600" />
         </div>
         <div>
-          <p className="font-serif text-lg text-[#1F3D2B]">Check your inbox</p>
+          <p className="font-serif text-lg text-[#1F3D2B] font-bold">Check your inbox</p>
           <p className="text-sm text-gray-500 mt-1">
             We sent a confirmation link to <span className="font-semibold text-gray-700">{email}</span>.
             Click it to activate your account, then return here to sign in.
@@ -251,7 +228,7 @@ function SignupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="space-y-1">
-        <label htmlFor="signup-email" className="field-label">Email address</label>
+        <label htmlFor="signup-email" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Email address</label>
         <input
           id="signup-email"
           type="email"
@@ -260,12 +237,12 @@ function SignupForm() {
           placeholder="you@example.com"
           autoComplete="email"
           required
-          className="field-input"
+          className="field-input w-full p-2.5 border border-gray-200 rounded-xl"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="signup-password" className="field-label">Password</label>
+        <label htmlFor="signup-password" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Password</label>
         <PasswordInput
           id="signup-password"
           value={password}
@@ -273,7 +250,6 @@ function SignupForm() {
           placeholder="At least 8 characters"
           autoComplete="new-password"
         />
-        {/* Password strength bar */}
         {password.length > 0 && (
           <div className="space-y-1 pt-1">
             <div className="flex gap-1">
@@ -294,7 +270,7 @@ function SignupForm() {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="signup-confirm" className="field-label">Confirm password</label>
+        <label htmlFor="signup-confirm" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Confirm password</label>
         <PasswordInput
           id="signup-confirm"
           value={confirm}
@@ -310,7 +286,7 @@ function SignupForm() {
       </div>
 
       {error && (
-        <div className="alert-error">
+        <div className="alert-error p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex gap-2">
           <AlertCircle size={14} className="shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
@@ -319,15 +295,15 @@ function SignupForm() {
       <button
         type="submit"
         disabled={loading || mismatch}
-        className="btn-primary mt-2"
+        className="btn-primary mt-2 w-full py-2.5 bg-[#1F3D2B] text-white rounded-xl font-bold transition-all hover:bg-[#152a1e] disabled:opacity-50"
       >
         {loading ? (
-          <span className="flex items-center gap-2">
-            <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
+          <span className="flex items-center justify-center gap-2">
+            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
             Creating account…
           </span>
         ) : (
-          <span className="flex items-center gap-2">
+          <span className="flex items-center justify-center gap-2">
             <Leaf size={15} /> Create account
           </span>
         )}
@@ -336,9 +312,6 @@ function SignupForm() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Forgot password form
-// ─────────────────────────────────────────────────────────────
 function ForgotPasswordForm({ onBack }) {
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
@@ -351,8 +324,6 @@ function ForgotPasswordForm({ onBack }) {
     setLoading(true);
     try {
       const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-        // Supabase will append ?type=recovery to this URL.
-        // Update this to your actual deployed domain in production.
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (authError) throw authError;
@@ -366,7 +337,6 @@ function ForgotPasswordForm({ onBack }) {
 
   return (
     <div className="space-y-5">
-      {/* Back button */}
       <button
         type="button"
         onClick={onBack}
@@ -376,14 +346,14 @@ function ForgotPasswordForm({ onBack }) {
       </button>
 
       <div>
-        <h2 className="font-serif text-lg text-[#1F3D2B]">Reset your password</h2>
+        <h2 className="font-serif text-lg text-[#1F3D2B] font-bold">Reset your password</h2>
         <p className="text-sm text-gray-400 mt-1">
           Enter your email and we'll send you a link to create a new password.
         </p>
       </div>
 
       {sent ? (
-        <div className="alert-success">
+        <div className="alert-success p-3 bg-green-50 border border-green-100 rounded-xl text-xs text-green-800 flex gap-2">
           <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
           <span>
             Reset link sent to <strong>{email}</strong>. Check your inbox (and spam folder).
@@ -392,7 +362,7 @@ function ForgotPasswordForm({ onBack }) {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-1">
-            <label htmlFor="forgot-email" className="field-label">Email address</label>
+            <label htmlFor="forgot-email" className="field-label block text-xs font-semibold text-gray-500 uppercase tracking-wider">Email address</label>
             <input
               id="forgot-email"
               type="email"
@@ -401,21 +371,21 @@ function ForgotPasswordForm({ onBack }) {
               placeholder="you@example.com"
               autoComplete="email"
               required
-              className="field-input"
+              className="field-input w-full p-2.5 border border-gray-200 rounded-xl"
             />
           </div>
 
           {error && (
-            <div className="alert-error">
+            <div className="alert-error p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex gap-2">
               <AlertCircle size={14} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="btn-primary">
+          <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 bg-[#1F3D2B] text-white rounded-xl font-bold transition-all hover:bg-[#152a1e]">
             {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 Sending…
               </span>
             ) : 'Send reset link'}
@@ -426,43 +396,30 @@ function ForgotPasswordForm({ onBack }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Root Auth component — exported and used by App.jsx
-// ─────────────────────────────────────────────────────────────
 export default function Auth() {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
-
-  function handleModeChange(newMode) {
-    setMode(newMode);
-  }
+  const [mode, setMode] = useState('login');
 
   return (
     <div className="min-h-screen bg-[#F5F8F0] flex items-center justify-center p-4">
-
-      {/* Decorative background blobs */}
       <div aria-hidden="true" className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#C7E26E]/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#4F7E5B]/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-sm animate-fade-slide-up">
+      <div className="relative w-full max-w-sm">
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
-
-          {/* Logo */}
           <LogoMark />
 
-          {/* Mode router */}
           {mode === 'forgot' ? (
             <ForgotPasswordForm onBack={() => setMode('login')} />
           ) : (
             <>
-              <ModeTabs mode={mode} setMode={handleModeChange} />
+              <ModeTabs mode={mode} setMode={setMode} />
               {mode === 'login'  && <LoginForm  onForgot={() => setMode('forgot')} />}
               {mode === 'signup' && <SignupForm />}
             </>
           )}
 
-          {/* Footer note */}
           {mode !== 'forgot' && (
             <p className="text-center text-xs text-gray-400 leading-relaxed">
               Your data is private and stored securely.

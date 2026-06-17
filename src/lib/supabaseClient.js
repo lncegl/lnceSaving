@@ -64,12 +64,15 @@ export async function fetchGoals(userId) {
   if (!userId) return []; // Safety check
   
   const { data, error } = await supabase
-    .from('goal_progress')  // use the DB view — progress is pre-computed
+    .from('goals')  // ⭐ Changed from 'goal_progress' to the real table 'goals'
     .select('*')
-    .eq('user_id', userId) // ⭐ Limits results to the logged-in user
+    .eq('user_id', userId) 
     .order('created_at', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error("[supabaseClient] Error fetching goals from table:", error);
+    throw error;
+  }
   return data;
 }
 
@@ -144,10 +147,10 @@ export async function deleteGoal(id) {
 }
 
 /** Upsert user settings (creates if missing, updates if present). */
-export async function upsertSettings(userId, patch) {
+export async function upsertSettings(payload) { // ⭐ Take payload object directly
   const { data, error } = await supabase
     .from('user_settings')
-    .upsert({ user_id: userId, ...patch }, { onConflict: 'user_id' })
+    .upsert(payload, { onConflict: 'user_id' })
     .select()
     .single();
 
