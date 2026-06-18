@@ -48,6 +48,10 @@
     font-family: 'Fraunces', Georgia, serif;
   }
 
+  input, select, textarea {
+  font-size: 16px !important;
+  }
+
   /* Ensure number inputs don't show browser spinners */
   input[type='number']::-webkit-inner-spin-button,
   input[type='number']::-webkit-outer-spin-button {
