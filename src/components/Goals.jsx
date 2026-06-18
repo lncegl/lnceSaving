@@ -294,7 +294,7 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
                 <span>Current Main Wallet Balance:</span>
                 <span className="font-mono font-semibold">{fmt(balance, currencySymbol)}</span>
               </div>
-              <div className="flex justify-between text-amber-700 font-semibold">
+              <div className="flex justify-between text-gray-500 font-semibold">
                 <span>Deduction Amount:</span>
                 <span className="font-mono">- {fmt(savedAmount, currencySymbol)}</span>
               </div>
@@ -306,7 +306,7 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
             </div>
 
             <p className="text-xs text-red-500 bg-red-50 p-2.5 rounded-xl border border-red-100">
-              ⚠️ Warning: This action will deduct funds directly from your main dashboard savings balance card.
+              Warning: This action will deduct funds directly from your main dashboard savings balance card.
             </p>
 
             <div className="mt-5 flex gap-2.5 justify-end">

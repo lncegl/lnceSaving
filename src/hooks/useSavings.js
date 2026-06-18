@@ -170,6 +170,15 @@ export function useSavings() {
     }
 
     try {
+      // ──────────────────────────────────────────────────────
+      // MAIN BALANCE
+      // Rule: a deposit/withdrawal that is allocated to a goal
+      // (goal_id set) is an internal transfer into/out of that
+      // goal's vault. It must NOT touch the main balance, since
+      // the Goals page explicitly promises this to the user.
+      // Only undirected deposits/withdrawals (no goal_id) move
+      // the main balance.
+      // ──────────────────────────────────────────────────────
       let totalDeposited = 0;
       let totalWithdrawn = 0;
       let baselineBalance = 0;
@@ -177,13 +186,21 @@ export function useSavings() {
       transactions.forEach((t) => {
         if (!t) return;
         const amt = Number(t.amount || 0);
-        // Normalize empty strings or missing IDs safely
         const hasGoal = t.goal_id && t.goal_id !== "";
-        
+
         if (t.type === 'deposit') {
-          totalDeposited += amt;
-          baselineBalance += amt;
+          if (!hasGoal) {
+            // Undirected deposit -> real income into main balance
+            totalDeposited += amt;
+            baselineBalance += amt;
+          }
+          // Goal-allocated deposit: money was already in main
+          // balance and is just being earmarked -> no balance change.
         } else if (['withdrawal', 'expense', 'withdraw'].includes(t.type)) {
+          // Both goal withdrawals and undirected withdrawals reduce
+          // main balance. Depositing into a goal never added to main
+          // balance, so withdrawing from one is a one-way deduction
+          // (per the Goals page's own warning to the user).
           baselineBalance -= amt;
           if (!hasGoal) {
             totalWithdrawn += amt;
@@ -193,6 +210,10 @@ export function useSavings() {
 
       const finalBalance = Math.max(0, baselineBalance);
 
+      // ──────────────────────────────────────────────────────
+      // GOAL VAULT BALANCES (unchanged: still driven purely by
+      // goal-tagged transactions)
+      // ──────────────────────────────────────────────────────
       const rawGoalBalances = {};
       goals.forEach(g => { if (g?.id) rawGoalBalances[g.id] = 0; });
 
@@ -223,17 +244,41 @@ export function useSavings() {
 
       const totalSavedSum = Object.values(rawGoalBalances).reduce((a, b) => a + Math.max(0, b), 0);
 
+      // ──────────────────────────────────────────────────────
+      // "SAVED THIS MONTH"
+      // Rule: reflects money actually moved INTO savings goals
+      // this month - not raw net cash flow.
+      //   + goal-allocated deposit  -> saved (money earmarked,
+      //     no cost to main balance)
+      //   - goal-allocated withdraw -> un-saved (funds pulled
+      //     out of the goal AND deducted from main balance -
+      //     a one-way exit, same direction as an expense)
+      //   undirected deposit/withdrawal (no goal_id) -> ignored,
+      //     since that's just income/spending on the main
+      //     balance, not progress toward a goal.
+      // ──────────────────────────────────────────────────────
       const monthPrefix = currentMonthPrefix();
       const thisMonthTx = transactions.filter((t) => t?.date?.startsWith(monthPrefix));
+
       const monthNet = thisMonthTx.reduce((sum, t) => {
+        if (!t) return sum;
         const amt = Number(t.amount || 0);
+        const hasGoal = t.goal_id && t.goal_id !== "";
+
+        if (!hasGoal) return sum; // undirected tx doesn't count as "saved"
+
         if (t.type === 'deposit') {
           return sum + amt;
-        } else {
+        } else if (['withdrawal', 'expense', 'withdraw'].includes(t.type)) {
           return sum - amt;
         }
+        return sum;
       }, 0);
 
+      // ──────────────────────────────────────────────────────
+      // BALANCE SERIES (history chart) - kept consistent with
+      // the corrected main-balance rule above.
+      // ──────────────────────────────────────────────────────
       const sorted = [...transactions]
         .filter(t => t && t.date)
         .sort((a, b) => {
@@ -245,8 +290,10 @@ export function useSavings() {
       let running = 0;
       const balanceSeries = sorted.map((t) => {
         const amt = Number(t.amount || 0);
+        const hasGoal = t.goal_id && t.goal_id !== "";
+
         if (t.type === 'deposit') {
-          running += amt;
+          if (!hasGoal) running += amt;
         } else if (['withdrawal', 'expense', 'withdraw'].includes(t.type)) {
           running -= amt;
         }
@@ -271,24 +318,44 @@ export function useSavings() {
   // 5. Secure Transaction Actions (Optimized with Local State Push)
 const addTransaction = useCallback(async (txData) => {
   if (!user) throw new Error('User must be logged in.');
-  
-  const formattedGoalId = txData.goal_id && txData.goal_id !== "" ? txData.goal_id : null;
-  const newTx = { 
-    ...txData, 
+
+  // Prevent withdrawing more than the available main balance.
+  // This now applies to BOTH undirected withdrawals (real spending)
+  // and goal withdrawals, since a goal withdrawal also deducts from
+  // main balance - if the user already spent that money elsewhere,
+  // main balance may no longer be able to cover it.
+  const hasGoal = txData.goal_id && txData.goal_id !== "";
+  if (
+    txData.type === 'withdrawal' &&
+    Number(txData.amount) > derived.balance
+  ) {
+    throw new Error(
+      `Withdrawal amount exceeds your available balance of ₱${derived.balance.toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}.`
+    );
+  }
+
+  const formattedGoalId =
+    txData.goal_id && txData.goal_id !== "" ? txData.goal_id : null;
+
+  const newTx = {
+    ...txData,
     user_id: user.id,
-    goal_id: formattedGoalId 
+    goal_id: formattedGoalId,
   };
-  
+
   // 1. Send to Supabase Database
   const savedTx = await insertTransaction(newTx);
-  
-  // 2. IMMEDIATELY update local state so balance re-calculates without a refresh!
+
+  // 2. Immediately update local state
   if (savedTx) {
-    setTransactions(prev => [savedTx, ...prev]);
+    setTransactions((prev) => [savedTx, ...prev]);
   }
-  
+
   return savedTx;
-}, [user]);
+}, [user, derived.balance]);
 
 const removeTransaction = useCallback(async (id) => {
   await dbDeleteTransaction(id);

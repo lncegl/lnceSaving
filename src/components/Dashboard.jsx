@@ -48,7 +48,17 @@ export default function Dashboard({
     e.preventDefault();
     setFormErr('');
     const n = parseFloat(amount);
-    if (!n || n <= 0) { setFormErr('Enter a valid amount.'); return; }
+    if (!n || n <= 0) {
+      setFormErr('Enter a valid amount.');
+      return;
+    }
+
+    if (type === 'withdrawal' && n > balance) {
+      setFormErr(
+        `Withdrawal amount exceeds your available balance of ${fmt(balance, currencySymbol)}.`
+      );
+      return;
+    }
     setSaving(true);
     try {
       await addTransaction({
