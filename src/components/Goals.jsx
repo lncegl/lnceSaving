@@ -125,10 +125,12 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
       setErr(`Insufficient funds. Your available main balance is ${fmt(balance, currencySymbol)}.`);
       return;
     }
-    if (n > remainingToGoal) {
-      setErr(`Deposit exceeds target cap. You only need ${fmt(remainingToGoal, currencySymbol)} to complete this goal.`);
-      return;
-    }
+    const roundedN = Math.round(n * 100) / 100;
+    const roundedRemaining = Math.round(remainingToGoal * 100) / 100;
+    if (roundedN > roundedRemaining) {
+    setErr(`Deposit exceeds target cap. You only need ${fmt(roundedRemaining, currencySymbol)} to complete this goal.`);
+    return;
+  }
 
     setSaving(true);
     setErr('');

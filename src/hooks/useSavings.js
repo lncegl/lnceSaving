@@ -155,6 +155,7 @@ export function useSavings() {
 
   // 4. Secure Balance & Goals Calculation Pipeline
   const derived = useMemo(() => {
+
     const fallback = {
       balance: 0,
       goals: [],
@@ -261,19 +262,12 @@ export function useSavings() {
       const thisMonthTx = transactions.filter((t) => t?.date?.startsWith(monthPrefix));
 
       const monthNet = thisMonthTx.reduce((sum, t) => {
-        if (!t) return sum;
-        const amt = Number(t.amount || 0);
-        const hasGoal = t.goal_id && t.goal_id !== "";
-
-        if (!hasGoal) return sum; // undirected tx doesn't count as "saved"
-
-        if (t.type === 'deposit') {
-          return sum + amt;
-        } else if (['withdrawal', 'expense', 'withdraw'].includes(t.type)) {
-          return sum - amt;
-        }
-        return sum;
-      }, 0);
+      if (!t) return sum;
+      const hasGoal = t.goal_id && t.goal_id !== "";
+      if (!hasGoal) return sum;
+      if (t.type === 'deposit') return sum + Number(t.amount || 0);
+      return sum; // withdrawals/expenses: skip entirely
+    }, 0);
 
       // ──────────────────────────────────────────────────────
       // BALANCE SERIES (history chart) - kept consistent with
