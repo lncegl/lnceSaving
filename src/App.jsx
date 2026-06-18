@@ -124,7 +124,7 @@ export default function App() {
             currencySymbol={activeCurrency}
             removeTransaction={removeTransaction}
           />
-          );
+        );
       case 'settings':
         return (
           <Settings
@@ -139,8 +139,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F8F0]">
-      <aside className="hidden md:block fixed top-0 left-0 h-screen w-64 z-40">
+    // Lock the viewport — no page-level scroll
+    <div className="h-screen overflow-hidden bg-[#F5F8F0] flex">
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:block w-64 h-screen shrink-0 z-40">
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -150,11 +153,8 @@ export default function App() {
           userName={user?.email || 'User Workspace'}
         />
       </aside>
-      <main className="md:ml-64 min-h-screen overflow-y-auto pb-16 md:pb-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8">
-          {renderActiveContent()}
-        </div>
-      </main>
+
+      {/* Mobile top nav */}
       <div className="md:hidden">
         <Sidebar
           activeTab={activeTab}
@@ -165,6 +165,14 @@ export default function App() {
           userName={user?.email || 'User Workspace'}
         />
       </div>
+
+      {/* Scrollable content area — starts below mobile nav via padding */}
+      <main className="flex-1 h-screen overflow-y-auto pt-[108px] md:pt-0">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8">
+          {renderActiveContent()}
+        </div>
+      </main>
+
     </div>
   );
 }

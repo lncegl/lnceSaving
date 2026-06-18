@@ -1,24 +1,30 @@
 // src/components/Sidebar.jsx
-import { Sprout, LayoutDashboard, ArrowRightLeft, Target, BarChart3, MessageCircle, LogOut, Settings, Receipt } from 'lucide-react';
+import { Sprout, LayoutDashboard, Target, BarChart3, MessageCircle, Settings, Receipt, ChevronLeft } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
-
 const NAV_ITEMS = [
-  { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { id: 'goals',        label: 'Goals',        icon: Target          },
-  { id: 'bills',        label: 'Bills',        icon: Receipt         },
+  { id: 'dashboard',  label: 'Dashboard',    icon: LayoutDashboard },
+  { id: 'goals',      label: 'Goals',        icon: Target          },
+  { id: 'bills',      label: 'Bills',        icon: Receipt         },
   { id: 'assistant',  label: 'AI Assistant', icon: MessageCircle   },
-  { id: 'activity',     label: 'Activity',     icon: BarChart3       },
+  { id: 'activity',   label: 'Activity',     icon: BarChart3       },
 ];
+
+const PAGE_TITLES = {
+  dashboard:  'Dashboard',
+  goals:      'Goals',
+  bills:      'Bills',
+  assistant:  'AI Assistant',
+  activity:   'Activity',
+  settings:   'Settings',
+};
 
 export default function Sidebar({ activeTab, setActiveTab, balance, currencySymbol = '₱', userName }) {
   const fmtBalance = (n) =>
     currencySymbol +
     Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-  }
+  const isSettings = activeTab === 'settings';
 
   return (
     <>
@@ -86,35 +92,88 @@ export default function Sidebar({ activeTab, setActiveTab, balance, currencySymb
           >
             <Settings size={16} /> Settings
           </button>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#A5C9A0] hover:bg-red-900/40 hover:text-red-300 transition-all"
-          >
-            <LogOut size={16} /> Sign out
-          </button>
         </div>
       </div>
 
-      {/* ── Mobile bottom tab bar ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1F3D2B] border-t border-[#2D5640] flex">
-        {NAV_ITEMS.map(({ id, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex-1 flex flex-col items-center py-3 text-xs font-semibold gap-1
-              ${activeTab === id ? 'text-[#C7E26E]' : 'text-[#6B9A66]'}`}
-          >
-            <Icon size={20} />
-          </button>
-        ))}
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 flex flex-col items-center py-3 text-xs font-semibold gap-1
-            ${activeTab === 'settings' ? 'text-[#C7E26E]' : 'text-[#6B9A66]'}`}
+      {/* ── Mobile: Settings back bar ── */}
+      {isSettings && (
+        <div
+          className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#1F3D2B]"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.12)' }}
         >
-          <Settings size={20} />
-        </button>
-      </nav>
+          <div className="flex items-center gap-3 px-4 pt-5 pb-5">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className="flex items-center gap-1 text-[#A5C9A0] active:opacity-60 transition-opacity select-none"
+            >
+              <ChevronLeft size={20} className="text-[#A5C9A0]" />
+              <span className="text-sm font-medium text-[#A5C9A0]">Back</span>
+            </button>
+            <span className="font-serif text-white font-semibold text-lg leading-none">
+              Settings
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile top nav bar — hidden on settings ── */}
+      {!isSettings && (
+        <div
+          className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#1F3D2B]"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.12)' }}
+        >
+          {/* Top row */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-4">
+
+            {/* Left: logo + Sprout + page title stacked beside */}
+            <div
+              onClick={() => setActiveTab('dashboard')}
+              className="flex items-center gap-2.5 cursor-pointer select-none"
+            >
+              <div className="w-8 h-8 rounded-xl bg-[#C7E26E] flex items-center justify-center shrink-0">
+                <Sprout size={17} className="text-[#1F3D2B]" />
+              </div>
+              <div className="flex flex-col justify-center">
+                <span className="font-serif text-white font-semibold text-base leading-none tracking-tight">
+                  Sprout
+                </span>
+                <span className="text-[#8FBF6F] text-[11px] font-medium leading-none mt-0.5 tracking-wide">
+                  {activeTab === 'dashboard'
+                    ? 'Savings Tracker'
+                    : PAGE_TITLES[activeTab]}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: settings button */}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="w-8 h-8 rounded-full bg-[#2D5640] flex items-center justify-center transition-colors active:bg-[#C7E26E] active:text-[#1F3D2B]"
+            >
+              <Settings size={15} className="text-[#A5C9A0]" />
+            </button>
+          </div>
+
+          {/* Bottom row — icon tabs */}
+          <nav className="flex border-t border-[#2D5640]/60">
+            {NAV_ITEMS.map(({ id, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className="flex-1 flex flex-col items-center py-3 relative"
+              >
+                <Icon
+                  size={22}
+                  className={`transition-colors duration-150 ${activeTab === id ? 'text-[#C7E26E]' : 'text-[#5A8A54]'}`}
+                />
+                {activeTab === id && (
+                  <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-[#C7E26E]" />
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
     </>
   );
 }

@@ -190,7 +190,7 @@ export default function AIChat({
 
   // ─────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] max-h-[780px] space-y-3">
+    <div className="flex flex-col h-[calc(100vh-108px)] md:h-[calc(100vh-7rem)] max-h-[780px] space-y-3">
 
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between">

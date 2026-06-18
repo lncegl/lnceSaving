@@ -110,14 +110,14 @@ export default function Dashboard({
               onClick={() => openModal('deposit')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#C7E26E]/20 text-[#C7E26E] hover:bg-[#C7E26E]/30 border border-[#C7E26E]/30 transition-all"
             >
-              <ArrowDownLeft size={13} /> Deposit
+              + Deposit
             </button>
             <button
               type="button"
               onClick={() => openModal('withdrawal')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-all"
             >
-              <ArrowUpRight size={13} /> Withdraw
+              - Withdraw
             </button>
           </div>
         </div>
@@ -145,44 +145,67 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Urgent bills warning banner ── */}
-      {unpaidUrgentBills.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={16} className="text-yellow-600 shrink-0" />
-              <p className="text-sm font-bold text-yellow-800">
-                {overdueBills.length > 0 && dueSoonBills.length > 0
-                  ? 'Bills overdue & due soon'
-                  : overdueBills.length > 0
-                    ? `${overdueBills.length} bill${overdueBills.length > 1 ? 's' : ''} overdue`
-                    : `${dueSoonBills.length} bill${dueSoonBills.length > 1 ? 's' : ''} due soon`}
-              </p>
+      {/* ── Bills banner — always shown ── */}
+        {(() => {
+          const hasOverdue = overdueBills.length > 0;
+          const hasUrgent  = dueSoonBills.length > 0;
+          const isAlert    = hasOverdue || hasUrgent;
+
+          return (
+            <div className={`border rounded-2xl p-4 space-y-2 transition-colors ${
+              hasOverdue
+                ? 'bg-red-50 border-red-200'
+                : hasUrgent
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-white border-gray-100'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className={`shrink-0 ${
+                    hasOverdue ? 'text-red-500' : hasUrgent ? 'text-yellow-600' : 'text-gray-300'
+                  }`} />
+                  <p className={`text-sm font-bold ${
+                    hasOverdue ? 'text-red-700' : hasUrgent ? 'text-yellow-800' : 'text-gray-400'
+                  }`}>
+                    {hasOverdue && hasUrgent
+                      ? 'Bills overdue & due soon'
+                      : hasOverdue
+                        ? `${overdueBills.length} bill${overdueBills.length > 1 ? 's' : ''} overdue`
+                        : hasUrgent
+                          ? `${dueSoonBills.length} bill${dueSoonBills.length > 1 ? 's' : ''} due soon`
+                          : 'All bills are on track'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bills')}
+                  className={`text-xs font-bold underline underline-offset-2 transition-colors ${
+                    hasOverdue ? 'text-red-600 hover:text-red-800' : hasUrgent ? 'text-yellow-700 hover:text-yellow-900' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  View bills →
+                </button>
+              </div>
+
+              {isAlert && (
+                <ul className="space-y-1">
+                  {unpaidUrgentBills.map(b => (
+                    <li key={b.id} className="flex items-center justify-between text-xs text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        <Receipt size={11} className="shrink-0" />
+                        <span className="font-semibold">{b.name}</span>
+                        {b.isOverdue
+                          ? <span className="text-red-600 font-bold">· Overdue</span>
+                          : <span className="text-yellow-600">· Due in {b.daysUntilDue}d</span>}
+                      </span>
+                      <span className="font-mono font-bold">{fmt(b.amount, currencySymbol)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab('bills')}
-              className="text-xs font-bold text-yellow-700 hover:text-yellow-900 underline underline-offset-2 transition-colors"
-            >
-              View bills →
-            </button>
-          </div>
-          <ul className="space-y-1">
-            {unpaidUrgentBills.map(b => (
-              <li key={b.id} className="flex items-center justify-between text-xs text-yellow-800">
-                <span className="flex items-center gap-1.5">
-                  <Receipt size={11} className="shrink-0" />
-                  <span className="font-semibold">{b.name}</span>
-                  {b.isOverdue
-                    ? <span className="text-red-600 font-bold">· Overdue</span>
-                    : <span className="text-yellow-600">· Due in {b.daysUntilDue}d</span>}
-                </span>
-                <span className="font-mono font-bold">{fmt(b.amount, currencySymbol)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+          );
+        })()}
 
       {/* ── Goals at a glance ── */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
