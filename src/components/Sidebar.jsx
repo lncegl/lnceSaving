@@ -2,13 +2,13 @@
 import { Sprout, LayoutDashboard, ArrowRightLeft, Target, BarChart3, MessageCircle, LogOut, Settings, Receipt } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
+
 const NAV_ITEMS = [
   { id: 'dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
   { id: 'goals',        label: 'Goals',        icon: Target          },
   { id: 'bills',        label: 'Bills',        icon: Receipt         },
-  { id: 'assistant',    label: 'AI Assistant', icon: MessageCircle   },
-  { id: 'insights',     label: 'Insights',     icon: BarChart3       },
-  { id: 'transactions', label: 'Transactions', icon: ArrowRightLeft  },
+  { id: 'assistant',  label: 'AI Assistant', icon: MessageCircle   },
+  { id: 'activity',     label: 'Activity',     icon: BarChart3       },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab, balance, currencySymbol = '₱', userName }) {

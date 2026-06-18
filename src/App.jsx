@@ -5,8 +5,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Goals from './components/Goals';
 import Bills from './components/Bills';
-import TransactionHistory from './components/TransactionHistory';
-import Insights from './components/Insights';
+import Activity from './components/Activity';
 import AIChat from './components/AIChat';
 import Settings from './components/Settings';
 import { useSavings } from './hooks/useSavings';
@@ -78,14 +77,6 @@ export default function App() {
             setActiveTab={setActiveTab}
           />
         );
-      case 'transactions':
-        return (
-          <TransactionHistory
-            transactions={transactions}
-            removeTransaction={removeTransaction}
-            currencySymbol={activeCurrency}
-          />
-        );
       case 'goals':
         return (
           <Goals
@@ -111,18 +102,6 @@ export default function App() {
             resetMonthlyBills={resetMonthlyBills}
           />
         );
-      case 'insights':
-        return (
-          <Insights
-            transactions={transactions}
-            goals={computedGoals}
-            totalDeposited={totalDeposited}
-            totalWithdrawn={totalWithdrawn}
-            monthNet={monthNet}
-            balanceSeries={balanceSeries}
-            currencySymbol={activeCurrency}
-          />
-        );
       case 'assistant':
         return (
           <AIChat
@@ -133,6 +112,19 @@ export default function App() {
             updateSettings={updateSettings}
           />
         );
+      case 'activity':
+        return (
+          <Activity
+            transactions={transactions}
+            goals={computedGoals}
+            totalDeposited={totalDeposited}
+            totalWithdrawn={totalWithdrawn}
+            monthNet={monthNet}
+            balanceSeries={balanceSeries}
+            currencySymbol={activeCurrency}
+            removeTransaction={removeTransaction}
+          />
+          );
       case 'settings':
         return (
           <Settings
