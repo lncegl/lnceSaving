@@ -4,6 +4,7 @@ import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Goals from './components/Goals';
+import Bills from './components/Bills';
 import TransactionHistory from './components/TransactionHistory';
 import Insights from './components/Insights';
 import AIChat from './components/AIChat';
@@ -16,8 +17,10 @@ export default function App() {
     goals: computedGoals, settings,
     balance, totalDeposited, totalWithdrawn,
     monthNet, balanceSeries,
+    billsWithStatus, unpaidUrgentBills,
     addTransaction, removeTransaction,
     addGoal, removeGoal, updateSettings,
+    addBill, removeBill, updateBill, payBill, unpayBill, resetMonthlyBills,
   } = useSavings();
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,6 +32,7 @@ export default function App() {
     globalError: error,
     loadedTransactions: transactions?.length || 0,
     loadedGoals: computedGoals?.length || 0,
+    loadedBills: billsWithStatus?.length || 0,
     currentTab: activeTab,
   });
 
@@ -68,6 +72,7 @@ export default function App() {
             monthNet={monthNet}
             balanceSeries={balanceSeries}
             goals={computedGoals}
+            unpaidUrgentBills={unpaidUrgentBills}
             addTransaction={addTransaction}
             currencySymbol={activeCurrency}
             setActiveTab={setActiveTab}
@@ -90,6 +95,20 @@ export default function App() {
             addTransaction={addTransaction}
             balance={balance}
             currencySymbol={activeCurrency}
+          />
+        );
+      case 'bills':
+        return (
+          <Bills
+            balance={balance}
+            billsWithStatus={billsWithStatus}
+            currencySymbol={activeCurrency}
+            addBill={addBill}
+            removeBill={removeBill}
+            updateBill={updateBill}
+            payBill={payBill}
+            unpayBill={unpayBill}
+            resetMonthlyBills={resetMonthlyBills}
           />
         );
       case 'insights':

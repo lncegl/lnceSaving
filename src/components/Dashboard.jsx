@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt } from 'lucide-react';
 
 const TX_CATEGORIES = [
   'Other','Salary','Allowance','Gift','Freelance',
@@ -34,6 +34,7 @@ function VineProgress({ percent }) {
 
 export default function Dashboard({
   balance, monthNet, balanceSeries, goals,
+  unpaidUrgentBills = [],
   currencySymbol = '₱', addTransaction, setActiveTab,
 }) {
   const [type,     setType]     = useState('deposit');
@@ -48,15 +49,9 @@ export default function Dashboard({
     e.preventDefault();
     setFormErr('');
     const n = parseFloat(amount);
-    if (!n || n <= 0) {
-      setFormErr('Enter a valid amount.');
-      return;
-    }
-
+    if (!n || n <= 0) { setFormErr('Enter a valid amount.'); return; }
     if (type === 'withdrawal' && n > balance) {
-      setFormErr(
-        `Withdrawal amount exceeds your available balance of ${fmt(balance, currencySymbol)}.`
-      );
+      setFormErr(`Withdrawal amount exceeds your available balance of ${fmt(balance, currencySymbol)}.`);
       return;
     }
     setSaving(true);
@@ -76,6 +71,10 @@ export default function Dashboard({
   }
 
   const netUp = monthNet >= 0;
+
+  // Group urgent bills by status for the banner
+  const overdueBills = unpaidUrgentBills.filter(b => b.isOverdue);
+  const dueSoonBills = unpaidUrgentBills.filter(b => b.isUrgent);
 
   return (
     <div className="space-y-6">
@@ -105,6 +104,45 @@ export default function Dashboard({
           </div>
         )}
       </div>
+
+      {/* ── Urgent bills warning banner ── */}
+          {unpaidUrgentBills.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-yellow-600 shrink-0" />
+                  <p className="text-sm font-bold text-yellow-800">
+                    {overdueBills.length > 0 && dueSoonBills.length > 0
+                      ? 'Bills overdue & due soon'
+                      : overdueBills.length > 0
+                        ? `${overdueBills.length} bill${overdueBills.length > 1 ? 's' : ''} overdue`
+                        : `${dueSoonBills.length} bill${dueSoonBills.length > 1 ? 's' : ''} due soon`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bills')}
+                  className="text-xs font-bold text-yellow-700 hover:text-yellow-900 underline underline-offset-2 transition-colors"
+                >
+                  View bills →
+                </button>
+              </div>
+              <ul className="space-y-1">
+                {unpaidUrgentBills.map(b => (
+                  <li key={b.id} className="flex items-center justify-between text-xs text-yellow-800">
+                    <span className="flex items-center gap-1.5">
+                      <Receipt size={11} className="shrink-0" />
+                      <span className="font-semibold">{b.name}</span>
+                      {b.isOverdue
+                        ? <span className="text-red-600 font-bold">· Overdue</span>
+                        : <span className="text-yellow-600">· Due in {b.daysUntilDue}d</span>}
+                    </span>
+                    <span className="font-mono font-bold">{fmt(b.amount, currencySymbol)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

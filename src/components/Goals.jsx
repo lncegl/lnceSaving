@@ -184,8 +184,8 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
           onClick={() => { setActionType('deposit'); setErr(''); }}
           className={`px-3 py-1.5 rounded-lg font-semibold border transition-all ${
             actionType === 'deposit'
-              ? 'bg-green-50 text-[#1F3D2B] border-green-200'
-              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+              ? 'bg-green-50 text-[#1F3D2B] border-green-400'
+              : 'bg-white text-gray-400 border-gray-300 hover:bg-gray-50'
           }`}
         >
           ↑ Deposit to Goal
@@ -195,8 +195,8 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
           onClick={() => { setActionType('withdraw'); setErr(''); }}
           className={`px-3 py-1.5 rounded-lg font-semibold border transition-all ${
             actionType === 'withdraw'
-              ? 'bg-amber-50 text-amber-800 border-amber-200'
-              : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+              ? 'bg-amber-50 text-amber-800 border-amber-400'
+              : 'bg-white text-gray-400 border-gray-300 hover:bg-gray-50'
           }`}
         >
           ↓ Withdraw Total
@@ -211,8 +211,9 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
             </p>
           ) : (
             <>
+              <div className="flex flex-col gap-2">
               <div className="flex gap-2">
-                <div className="relative w-28 shrink-0">
+                <div className="relative flex-1">
                   <input
                     type="number"
                     min="0"
@@ -220,16 +221,8 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
                     placeholder="Amount"
                     value={amount}
                     onChange={(e) => { setAmount(e.target.value); setErr(''); }}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-                  />
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
-                />
                 <button
                   type="button"
                   onClick={handleDeposit}
@@ -239,6 +232,13 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
                   {saving ? '…' : '↑ Add'}
                 </button>
               </div>
+              <input
+                type="text"
+                placeholder="Note (optional)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"              />
+            </div>
 
               {inputNum > 0 && !err && (
                 <div className="flex items-start gap-2 bg-green-50 border border-green-100 rounded-xl p-2.5 text-xs text-green-800">
@@ -288,7 +288,7 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
             </div>
             
             <p className="text-sm text-gray-600 leading-relaxed">
-              You are about to withdraw <span className="font-mono font-bold text-amber-800">{fmt(savedAmount, currencySymbol)}</span> from your <span className="font-bold">"{goalName}"</span> milestone pool.
+              You are about to withdraw <span className="font-bold">{fmt(savedAmount, currencySymbol)}</span> from your <span className="font-bold">"{goalName}"</span> milestone pool.
             </p>
 
             <div className="my-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs">
