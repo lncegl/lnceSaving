@@ -606,10 +606,13 @@ export default function Goals({
                 min={today()}
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E] text-gray-700 bg-white appearance-none"
+                style={{
+                  WebkitAppearance: 'none',
+                  colorScheme: 'light',
+                }}
               />
             </label>
-          </div>
 
           {formErr && (
             <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
