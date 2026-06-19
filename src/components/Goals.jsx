@@ -598,7 +598,6 @@ export default function Goals({
                 />
               </div>
             </label>
-
             <label className="block min-w-0">
               <span className="text-xs text-gray-500 font-semibold">Target date (optional)</span>
               <input
@@ -613,6 +612,7 @@ export default function Goals({
                 }}
               />
             </label>
+          </div>
 
           {formErr && (
             <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
