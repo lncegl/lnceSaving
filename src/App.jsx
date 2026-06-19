@@ -8,6 +8,7 @@ import Bills from './components/Bills';
 import Activity from './components/Activity';
 import AIChat from './components/AIChat';
 import Settings from './components/Settings';
+import ResetPassword from './components/ResetPassword'; // Added ResetPassword component
 import { useSavings } from './hooks/useSavings';
 
 export default function App() {
@@ -59,6 +60,15 @@ export default function App() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // INTERCEPT RECOVERY FLOW: Renders the reset password layout before the authentication wall checks block it
+  const isResetFlow = window.location.pathname === '/reset-password' || 
+                      window.location.hash.includes('type=recovery');
+
+  if (isResetFlow) {
+    console.log('🔑 [App.jsx Routing] Recovery parameter caught. Mounting Reset Form.');
+    return <ResetPassword />;
+  }
 
   if (loading) {
     return (
