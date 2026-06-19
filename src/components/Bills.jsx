@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 
 const BILL_CATEGORIES = [
-  'Other', 'Rent', 'Electric', 'Water', 'Internet', 'Phone',
-  'Netflix', 'Spotify', 'YouTube Premium', 'Insurance',
-  'Loan', 'Groceries', 'Transport', 'Gym',
+  'Other', 'Rent & Housing', 'Electricity', 'Water', 'Internet',
+  'Phone & Mobile', 'Streaming & Subscriptions', 'Insurance',
+  'Loan & Credit', 'Groceries', 'Transport', 'Health & Medical',
+  'Gym & Fitness', 'Education', 'Savings Transfer',
 ];
 
 function fmt(n, symbol = '₱') {

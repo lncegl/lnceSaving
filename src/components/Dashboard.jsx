@@ -3,10 +3,15 @@ import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock } from 'lucide-react';
 
-const TX_CATEGORIES = [
-  'Other','Salary','Allowance','Gift','Freelance',
-  'Groceries','Bills','Transport','Entertainment',
-  'Health','Savings Transfer',
+const DEPOSIT_CATEGORIES = [
+  'Other', 'Salary', 'Freelance', 'Allowance', 'Business', 'Gift', 'Bonus',
+  'Investment', 'Refund', 'Rental Income', 'Side Hustle',
+];
+
+const WITHDRAWAL_CATEGORIES = [
+  'Other', 'Food & Dining', 'Groceries', 'Bills & Utilities', 'Transport',
+  'Shopping', 'Health & Medical', 'Entertainment', 'Education',
+  'Savings Transfer', 'Rent', 'Personal Care', 'Travel',
 ];
 
 function fmt(n, symbol = '₱') {
@@ -68,7 +73,7 @@ export default function Dashboard({
 }) {
   const [type,     setType]     = useState('deposit');
   const [amount,   setAmount]   = useState('');
-  const [category, setCategory] = useState(TX_CATEGORIES[0]);
+  const [category, setCategory] = useState(DEPOSIT_CATEGORIES[0]);
   const [note,     setNote]     = useState('');
   const [goalId,   setGoalId]   = useState('');
   const [saving,   setSaving]   = useState(false);
@@ -81,7 +86,7 @@ export default function Dashboard({
     setNote('');
     setGoalId('');
     setFormErr('');
-    setCategory(TX_CATEGORIES[0]);
+    setCategory(t === 'deposit' ? DEPOSIT_CATEGORIES[0] : WITHDRAWAL_CATEGORIES[0]);
     setModal(t);
   }
 
@@ -418,7 +423,9 @@ export default function Dashboard({
                     onChange={(e) => setCategory(e.target.value)}
                     className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
                   >
-                    {TX_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                    {(type === 'deposit' ? DEPOSIT_CATEGORIES : WITHDRAWAL_CATEGORIES).map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
                   </select>
                 </label>
                 {modal === 'deposit' && goals.length > 0 && (
