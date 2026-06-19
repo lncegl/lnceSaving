@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Auth from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -23,6 +23,14 @@ export default function App() {
   } = useSavings();
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const mainRef = useRef(null);
+
+  // Reset scroll position whenever the tab changes
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [activeTab]);
 
   console.log('📊 [App.jsx Monitor] — User State:', {
     isAuthenticated: !!user,
@@ -139,7 +147,6 @@ export default function App() {
   };
 
   return (
-    // Lock the viewport — no page-level scroll
     <div className="h-screen overflow-hidden bg-[#F5F8F0] flex">
 
       {/* Desktop sidebar */}
@@ -166,11 +173,30 @@ export default function App() {
         />
       </div>
 
-      {/* Scrollable content area — starts below mobile nav via padding */}
-      <main className="flex-1 h-screen overflow-y-auto pt-[108px] md:pt-0">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8">
-          {renderActiveContent()}
-        </div>
+      {/* Main content area */}
+      <main
+        ref={mainRef}
+        className={`flex-1 ${activeTab === 'assistant' ? 'overflow-hidden' : 'overflow-y-auto'}`}
+        style={{ height: '100vh' }}
+      >
+        {activeTab === 'assistant' ? (
+          <div
+            className="flex flex-col h-full px-4 sm:px-6 md:px-8 md:py-8 md:max-w-5xl md:mx-auto"
+            style={{ paddingTop: 'calc(108px + 1rem)' }}
+          >
+            <AIChat
+              transactions={transactions}
+              goals={computedGoals}
+              currencySymbol={activeCurrency}
+              settings={settings}
+              updateSettings={updateSettings}
+            />
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 pt-[124px] md:pt-6">
+            {renderActiveContent()}
+          </div>
+        )}
       </main>
 
     </div>
