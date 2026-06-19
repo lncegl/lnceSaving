@@ -4,20 +4,21 @@
 //   user            – Supabase User object
 //   settings        – row from user_settings table
 //   updateSettings  – async (patch) => updatedSettings
+//   resetData       – async () => void  — clears all savings data
 //
 // Sections:
 //   1. Profile         — email, member since
 //   2. Currency        — symbol + code that drive all fmt() calls
 //   3. AI Assistant    — Gemini API key management
-//   4. Security        — change password
-//   5. Danger zone     — sign out, account deletion notice
+//   4. Security        — reset password, change email, reset data (accordion)
+//   5. Account         — sign out
 // ─────────────────────────────────────────────────────────────
 
 import { useState } from 'react';
 import {
   User, Globe, KeyRound, ShieldCheck, LogOut,
-  CheckCircle2, AlertCircle, Eye, EyeOff, ChevronRight,
-  Sprout,
+  CheckCircle2, AlertCircle, Eye, EyeOff,
+  Sprout, Trash2, RotateCcw, Mail, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -98,7 +99,6 @@ function ProfileSection({ user }) {
       description="Your account information"
     >
       <div className="flex items-center gap-4">
-        {/* Avatar initial */}
         <div className="w-14 h-14 rounded-2xl bg-[#1F3D2B] flex items-center justify-center text-[#C7E26E] font-serif text-2xl font-semibold shrink-0 select-none">
           {emailInitial}
         </div>
@@ -160,7 +160,7 @@ function CurrencySection({ settings, updateSettings }) {
               onClick={() => { setSelected(code); setSuccess(''); setError(''); }}
               className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all text-left ${
                 selected === code
-                  ? 'bg-[#1F3D2B] text-[#C7E26E] border-[#1F3D2B]'
+                  ? 'bg-[#F0F7EC] text-[#1F3D2B] border-[#C7E26E]/60 hover:bg-[#E3F2D7]'
                   : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
               }`}
             >
@@ -196,12 +196,15 @@ function CurrencySection({ settings, updateSettings }) {
 // ─────────────────────────────────────────────────────────────
 function AISection({ settings, updateSettings }) {
   const existingKey = settings?.gemini_api_key ?? '';
-  const [input,    setInput]    = useState('');
-  const [showKey,  setShowKey]  = useState(false);
-  const [saving,   setSaving]   = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const [success,  setSuccess]  = useState('');
-  const [error,    setError]    = useState('');
+  const [input,          setInput]          = useState('');
+  const [showKey,        setShowKey]        = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [removing,       setRemoving]       = useState(false);
+  const [confirmRemove,  setConfirmRemove]  = useState(false);
+  const [success,        setSuccess]        = useState('');
+  const [error,          setError]          = useState('');
+
+  function reset() { setSuccess(''); setError(''); setConfirmRemove(false); }
 
   async function handleSave() {
     const key = input.trim();
@@ -226,7 +229,8 @@ function AISection({ settings, updateSettings }) {
     setError('');
     try {
       await updateSettings({ gemini_api_key: null });
-      setSuccess('API key removed.');
+      setConfirmRemove(false);
+      setSuccess('API key removed. AI Assistant is now disabled.');
     } catch (err) {
       setError(err.message || 'Failed to remove API key.');
     } finally {
@@ -251,59 +255,94 @@ function AISection({ settings, updateSettings }) {
           {existingKey ? 'API key connected — Sprout AI is active' : 'No API key set — AI Assistant is disabled'}
         </div>
 
-        {/* Instructions */}
-        <p className="text-xs text-gray-400 leading-relaxed">
-          Get a free key from{' '}
-          <a
-            href="https://aistudio.google.com/apikey"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#4F7E5B] underline font-semibold hover:text-[#1F3D2B]"
-          >
-            aistudio.google.com/apikey
-          </a>
-          . Your key is stored in your account and is only used to send your financial
-          questions to Google's Gemini model.
-        </p>
+        {existingKey ? (
+          /* ── Key already set: show remove flow only ── */
+          <>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Your Gemini API key is active. To use a different key, remove this one first and then paste a new key.
+            </p>
 
-        {/* Input row */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={input}
-              onChange={(e) => { setInput(e.target.value); setSuccess(''); setError(''); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              placeholder={existingKey ? 'Paste new key to replace existing…' : 'Paste your Gemini API key…'}
-              className="field-input pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label={showKey ? 'Hide key' : 'Show key'}
-            >
-              {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={!input.trim() || saving}
-            className="btn-secondary shrink-0"
-          >
-            {saving ? '…' : 'Save'}
-          </button>
-        </div>
+            {!confirmRemove ? (
+              <button
+                type="button"
+                onClick={() => { setConfirmRemove(true); setSuccess(''); setError(''); }}
+                className="w-full bg-[#1F3D2B] text-[#C7E26E] font-bold text-sm py-2 rounded-xl hover:bg-[#2d5a3f] transition-colors"
+              >
+                Remove API key
+              </button>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                    Removing your API key will disable the AI Assistant. You can re-add a key at any time to re-enable it.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleRemove}
+                    disabled={removing}
+                    className="flex-1 bg-[#1F3D2B] text-[#C7E26E] font-bold text-sm py-2 rounded-xl hover:bg-[#2d5a3f] disabled:opacity-50 transition-colors"
+                  >
+                    {removing ? 'Removing…' : 'Yes, remove key'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemove(false)}
+                    className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold text-sm py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── No key: show paste + save flow ── */
+          <>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Get a free key from{' '}
+              <a
+                href="https://aistudio.google.com/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#4F7E5B] underline font-semibold hover:text-[#1F3D2B]"
+              >
+                aistudio.google.com/apikey
+              </a>
+              . Your key is stored in your account and is only used to send your financial
+              questions to Google's Gemini model.
+            </p>
 
-        {/* Remove key */}
-        {existingKey && (
-          <button
-            onClick={handleRemove}
-            disabled={removing}
-            className="btn-danger w-full"
-          >
-            {removing ? 'Removing…' : 'Remove API key'}
-          </button>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); reset(); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                  placeholder="Paste your Gemini API key…"
+                  className="field-input pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showKey ? 'Hide key' : 'Show key'}
+                >
+                  {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              <button
+                onClick={handleSave}
+                disabled={!input.trim() || saving}
+                className="btn-secondary shrink-0"
+              >
+                {saving ? '…' : 'Save'}
+              </button>
+            </div>
+          </>
         )}
 
         <Feedback success={success} error={error} />
@@ -313,50 +352,112 @@ function AISection({ settings, updateSettings }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 4. Security — change password
+// Accordion row used inside SecuritySection
 // ─────────────────────────────────────────────────────────────
-function SecuritySection() {
-  const [current,  setCurrent]  = useState('');
-  const [next,     setNext]     = useState('');
-  const [confirm,  setConfirm]  = useState('');
-  const [showCur,  setShowCur]  = useState(false);
-  const [showNew,  setShowNew]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [success,  setSuccess]  = useState('');
-  const [error,    setError]    = useState('');
+function AccordionRow({ label, hint, open, onToggle, children }) {
+  return (
+    <div className="border border-gray-100 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+      >
+        <div>
+          <p className="text-sm font-semibold text-gray-700">{label}</p>
+          {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+        </div>
+        <ChevronDown
+          size={16}
+          className={`text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="px-4 py-4 border-t border-gray-100 bg-white">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  const mismatch = confirm.length > 0 && confirm !== next;
+// ─────────────────────────────────────────────────────────────
+// 4. Security — password, email, reset data
+// ─────────────────────────────────────────────────────────────
+function SecuritySection({ resetData }) {
+  const [openPanel, setOpenPanel] = useState(null); // 'password' | 'email' | 'reset'
+  function toggle(panel) { setOpenPanel((p) => (p === panel ? null : panel)); }
+
+  // ── Change password state ──
+  const [pwCurrent,  setPwCurrent]  = useState('');
+  const [pwNext,     setPwNext]     = useState('');
+  const [pwConfirm,  setPwConfirm]  = useState('');
+  const [showCur,    setShowCur]    = useState(false);
+  const [showNew,    setShowNew]    = useState(false);
+  const [pwLoading,  setPwLoading]  = useState(false);
+  const [pwSuccess,  setPwSuccess]  = useState('');
+  const [pwError,    setPwError]    = useState('');
+  const mismatch = pwConfirm.length > 0 && pwConfirm !== pwNext;
 
   async function handleChangePassword(e) {
     e.preventDefault();
-    if (next !== confirm) { setError('New passwords do not match.'); return; }
-    if (next.length < 8)  { setError('New password must be at least 8 characters.'); return; }
-
-    setLoading(true);
-    setSuccess('');
-    setError('');
-
+    if (pwNext !== pwConfirm) { setPwError('New passwords do not match.'); return; }
+    if (pwNext.length < 8)    { setPwError('New password must be at least 8 characters.'); return; }
+    setPwLoading(true); setPwSuccess(''); setPwError('');
     try {
-      // Re-authenticate with the current password first
       const { data: { user } } = await supabase.auth.getUser();
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: current,
-      });
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user.email, password: pwCurrent });
       if (signInErr) throw new Error('Current password is incorrect.');
-
-      // Update to new password
-      const { error: updateErr } = await supabase.auth.updateUser({ password: next });
+      const { error: updateErr } = await supabase.auth.updateUser({ password: pwNext });
       if (updateErr) throw updateErr;
-
-      setSuccess('Password changed successfully.');
-      setCurrent('');
-      setNext('');
-      setConfirm('');
+      setPwSuccess('Password changed successfully.');
+      setPwCurrent(''); setPwNext(''); setPwConfirm('');
     } catch (err) {
-      setError(err.message || 'Failed to change password.');
+      setPwError(err.message || 'Failed to change password.');
     } finally {
-      setLoading(false);
+      setPwLoading(false);
+    }
+  }
+
+  // ── Change email state ──
+  const [newEmail,    setNewEmail]    = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [emailError,   setEmailError]   = useState('');
+
+  async function handleChangeEmail(e) {
+    e.preventDefault();
+    if (!newEmail.trim()) { setEmailError('Enter a new email address.'); return; }
+    setEmailLoading(true); setEmailSuccess(''); setEmailError('');
+    try {
+      const { error: updateErr } = await supabase.auth.updateUser({ email: newEmail.trim() });
+      if (updateErr) throw updateErr;
+      setEmailSuccess('Confirmation sent to your new address. Click the link in your inbox to confirm the change.');
+      setNewEmail('');
+    } catch (err) {
+      setEmailError(err.message || 'Failed to update email.');
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  // ── Reset data state ──
+  const [resetStep,  setResetStep]  = useState('idle'); // 'idle' | 'confirm' | 'typing' | 'loading' | 'done'
+  const [resetInput, setResetInput] = useState('');
+  const [resetError, setResetError] = useState('');
+  const RESET_PHRASE = 'lnce masarap';
+
+  async function handleReset() {
+    if (resetInput.trim().toLowerCase() !== RESET_PHRASE) {
+      setResetError(`Type "${RESET_PHRASE}" exactly to confirm.`);
+      return;
+    }
+    setResetStep('loading'); setResetError('');
+    try {
+      await resetData?.();
+      setResetStep('done'); setResetInput('');
+    } catch (err) {
+      setResetError(err.message || 'Failed to reset data. Please try again.');
+      setResetStep('typing');
     }
   }
 
@@ -364,115 +465,248 @@ function SecuritySection() {
     <Section
       icon={ShieldCheck}
       title="Security"
-      description="Change your account password"
+      description="Manage your password, email, and account data"
     >
-      <form onSubmit={handleChangePassword} className="space-y-3" noValidate>
-        <div className="space-y-1">
-          <label className="field-label">Current password</label>
-          <div className="relative">
-            <input
-              type={showCur ? 'text' : 'password'}
-              value={current}
-              onChange={(e) => { setCurrent(e.target.value); setError(''); }}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              required
-              className="field-input pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowCur((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showCur ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
-          </div>
-        </div>
+      <div className="space-y-2">
 
-        <div className="space-y-1">
-          <label className="field-label">New password</label>
-          <div className="relative">
-            <input
-              type={showNew ? 'text' : 'password'}
-              value={next}
-              onChange={(e) => { setNext(e.target.value); setError(''); }}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              className="field-input pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNew((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="field-label">Confirm new password</label>
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => { setConfirm(e.target.value); setError(''); }}
-            placeholder="Re-enter new password"
-            autoComplete="new-password"
-            required
-            className="field-input"
-          />
-          {mismatch && (
-            <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
-              <AlertCircle size={11} /> Passwords don't match
-            </p>
-          )}
-        </div>
-
-        <Feedback success={success} error={error} />
-
-        <button
-          type="submit"
-          disabled={loading || mismatch}
-          className="btn-primary"
+        {/* ── Reset password ── */}
+        <AccordionRow
+          label="Reset password"
+          hint="Change your current login password"
+          open={openPanel === 'password'}
+          onToggle={() => toggle('password')}
         >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
-              Updating password…
-            </span>
-          ) : 'Update password'}
-        </button>
-      </form>
+          <form onSubmit={handleChangePassword} className="space-y-3" noValidate>
+            <div className="space-y-1">
+              <label className="field-label">Current password</label>
+              <div className="relative">
+                <input
+                  type={showCur ? 'text' : 'password'}
+                  value={pwCurrent}
+                  onChange={(e) => { setPwCurrent(e.target.value); setPwError(''); }}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                  className="field-input pr-10"
+                />
+                <button type="button" onClick={() => setShowCur((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showCur ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="field-label">New password</label>
+              <div className="relative">
+                <input
+                  type={showNew ? 'text' : 'password'}
+                  value={pwNext}
+                  onChange={(e) => { setPwNext(e.target.value); setPwError(''); }}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  className="field-input pr-10"
+                />
+                <button type="button" onClick={() => setShowNew((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="field-label">Confirm new password</label>
+              <input
+                type="password"
+                value={pwConfirm}
+                onChange={(e) => { setPwConfirm(e.target.value); setPwError(''); }}
+                placeholder="Re-enter new password"
+                autoComplete="new-password"
+                required
+                className="field-input"
+              />
+              {mismatch && (
+                <p className="text-xs text-red-500 font-semibold mt-1 flex items-center gap-1">
+                  <AlertCircle size={11} /> Passwords don't match
+                </p>
+              )}
+            </div>
+            <Feedback success={pwSuccess} error={pwError} />
+            <button type="submit" disabled={pwLoading || mismatch} className="btn-primary">
+              {pwLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
+                  Updating…
+                </span>
+              ) : 'Update password'}
+            </button>
+          </form>
+        </AccordionRow>
+
+        {/* ── Change email ── */}
+        <AccordionRow
+          label="Change email"
+          hint="Update the email address linked to your account"
+          open={openPanel === 'email'}
+          onToggle={() => toggle('email')}
+        >
+          <form onSubmit={handleChangeEmail} className="space-y-3" noValidate>
+            <div className="space-y-1">
+              <label className="field-label">New email address</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => { setNewEmail(e.target.value); setEmailError(''); }}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  name="email"
+                  required
+                  className="field-input pl-9"
+                />
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Supabase will send a confirmation link to this address.</p>
+            </div>
+            <Feedback success={emailSuccess} error={emailError} />
+            <button type="submit" disabled={emailLoading || !newEmail.trim()} className="btn-primary">
+              {emailLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-[#C7E26E]/40 border-t-[#C7E26E] rounded-full animate-spin" />
+                  Sending confirmation…
+                </span>
+              ) : 'Update email'}
+            </button>
+          </form>
+        </AccordionRow>
+
+        {/* ── Reset data ── */}
+        <AccordionRow
+          label="Reset all data"
+          hint="Permanently erase all savings goals and history"
+          open={openPanel === 'reset'}
+          onToggle={() => { toggle('reset'); setResetStep('idle'); setResetInput(''); setResetError(''); }}
+        >
+          <div className="space-y-3">
+            {resetStep === 'idle' && (
+              <>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  This will permanently delete all your savings goals, transactions, and history.
+                  Your account, settings, and API key will remain intact. <span className="font-semibold text-gray-700">This cannot be undone.</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setResetStep('confirm')}
+                  className="w-full bg-[#1F3D2B] text-[#C7E26E] font-bold text-sm py-2 rounded-xl hover:bg-[#2D5A3F] transition-colors flex items-center justify-center gap-2"
+                >
+                  <RotateCcw size={14} /> Reset all data
+                </button>
+              </>
+            )}
+
+            {resetStep === 'confirm' && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Trash2 size={15} className="text-red-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-red-700">Are you sure?</p>
+                    <p className="text-xs text-red-500 leading-relaxed">
+                      All goals, transactions, and history will be erased permanently.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button"
+                    onClick={() => { setResetStep('typing'); setResetInput(''); setResetError(''); }}
+                    className="flex-1 bg-[#991B1B] text-white font-bold text-sm py-2 rounded-xl hover:bg-[#B91C1C] transition-colors">
+                    I understand, continue
+                  </button>
+                  <button type="button" onClick={() => setResetStep('idle')}
+                    className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold text-sm py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetStep === 'typing' && (
+              <div className="space-y-3">
+                <p className="text-xs text-red-700 font-medium leading-relaxed">
+                  Type <span className="font-mono font-bold bg-red-100 px-1 py-0.5 rounded">{RESET_PHRASE}</span> to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={resetInput}
+                  onChange={(e) => { setResetInput(e.target.value); setResetError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleReset()}
+                  placeholder={RESET_PHRASE}
+                  className="field-input text-sm"
+                  autoFocus
+                />
+                {resetError && (
+                  <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                    <AlertCircle size={11} /> {resetError}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button type="button" onClick={handleReset}
+                    disabled={!resetInput.trim()}
+                    className="flex-1 bg-[#991B1B] text-white font-bold text-sm py-2 rounded-xl hover:bg-[#B91C1C] disabled:opacity-40 transition-colors">
+                    Reset all data
+                  </button>
+                  <button type="button"
+                    onClick={() => { setResetStep('idle'); setResetInput(''); setResetError(''); }}
+                    className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold text-sm py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetStep === 'loading' && (
+              <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500">
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#4F7E5B] rounded-full animate-spin" />
+                Resetting your data…
+              </div>
+            )}
+
+            {resetStep === 'done' && (
+              <div className="alert-success">
+                <CheckCircle2 size={13} className="shrink-0 mt-0.5" />
+                <span>All data has been reset. Your account and settings are unchanged.</span>
+              </div>
+            )}
+          </div>
+        </AccordionRow>
+
+      </div>
     </Section>
   );
 }
 
 // ─────────────────────────────────────────────────────────────
-// 5. Danger zone — sign out
+// 5. Account — sign out
 // ─────────────────────────────────────────────────────────────
 function DangerSection() {
-  const [signing, setSigning]   = useState(false);
-  const [confirm, setConfirm]   = useState(false);
+  const [signing,        setSigning]        = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   async function handleSignOut() {
     setSigning(true);
     await supabase.auth.signOut();
-    // useSavings onAuthStateChange will clear user → App.jsx shows Auth
   }
 
   return (
     <Section
       icon={LogOut}
       title="Account"
-      description="Sign out or manage your account"
+      description="Sign out of your account"
     >
       <div className="space-y-3">
-        {!confirm ? (
+        {!confirmSignOut ? (
           <button
-            onClick={() => setConfirm(true)}
-            className="btn-danger w-full"
+            onClick={() => setConfirmSignOut(true)}
+            className="w-full bg-red-50 text-red-600 border border-red-200 font-bold text-sm py-2.5 rounded-xl hover:bg-red-100 active:bg-red-200 transition-colors flex items-center justify-center gap-2"
           >
             <LogOut size={15} /> Sign out
           </button>
@@ -485,20 +719,19 @@ function DangerSection() {
               <button
                 onClick={handleSignOut}
                 disabled={signing}
-                className="flex-1 bg-red-600 text-white font-bold text-sm py-2 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="flex-1 bg-[#991B1B] text-white font-bold text-sm py-2 rounded-xl hover:bg-[#B91C1C] disabled:opacity-50 transition-colors"
               >
                 {signing ? 'Signing out…' : 'Yes, sign out'}
               </button>
               <button
-                onClick={() => setConfirm(false)}
+                onClick={() => setConfirmSignOut(false)}
                 className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold text-sm py-2 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancel
-          </button>
+              </button>
             </div>
           </div>
         )}
-
         <p className="text-xs text-gray-400 text-center pt-1">
           Your data stays safe in your Supabase account.
         </p>
@@ -509,9 +742,9 @@ function DangerSection() {
 
 // ─────────────────────────────────────────────────────────────
 // Root Settings component — exported and used by App.jsx
-// Props: { user, settings, updateSettings }
+// Props: { user, settings, updateSettings, resetData }
 // ─────────────────────────────────────────────────────────────
-export default function Settings({ user, settings, updateSettings }) {
+export default function Settings({ user, settings, updateSettings, resetData }) {
   return (
     <div className="space-y-5">
       {/* Page header */}
@@ -528,7 +761,7 @@ export default function Settings({ user, settings, updateSettings }) {
       <ProfileSection  user={user} />
       <CurrencySection settings={settings} updateSettings={updateSettings} />
       <AISection       settings={settings} updateSettings={updateSettings} />
-      <SecuritySection />
+      <SecuritySection resetData={resetData} />
       <DangerSection   />
 
       {/* Version footer */}
