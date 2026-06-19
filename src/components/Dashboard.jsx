@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock, Pencil } from 'lucide-react';
 
 const DEPOSIT_CATEGORIES = [
   'Other', 'Salary', 'Freelance', 'Allowance', 'Business', 'Gift', 'Bonus',
@@ -14,6 +14,9 @@ const WITHDRAWAL_CATEGORIES = [
   'Savings Transfer', 'Rent', 'Personal Care', 'Travel',
 ];
 
+// Quick-pick emoji icons for the storage badge
+const STORAGE_ICON_OPTIONS = ['💰', '🏦', '📱', '🐷', '💵', '🪙', '💳', '🏧', '👛', '🧧'];
+
 function fmt(n, symbol = '₱') {
   return symbol + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -21,7 +24,6 @@ function today() { return new Date().toISOString().slice(0, 10); }
 
 function fmtDate(dateStr) {
   if (!dateStr) return '';
-  // Parse as local date to avoid UTC timezone shifting
   const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
   const date = new Date(y, m - 1, d);
   const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
@@ -50,6 +52,11 @@ function VineProgress({ percent }) {
   );
 }
 
+// Renders the small storage badge icon
+function StorageIcon({ icon, size = 16 }) {
+  return <span style={{ fontSize: size }}>{icon || '💰'}</span>;
+}
+
 // ── Category colour chips ──────────────────────────────────────────────────
 const CATEGORY_COLORS = {
   Salary:           'bg-green-100 text-green-800',
@@ -70,6 +77,7 @@ export default function Dashboard({
   unpaidUrgentBills = [],
   transactions = [],
   currencySymbol = '₱', addTransaction, setActiveTab,
+  settings, updateSettings,
 }) {
   const [type,     setType]     = useState('deposit');
   const [amount,   setAmount]   = useState('');
@@ -79,6 +87,48 @@ export default function Dashboard({
   const [saving,   setSaving]   = useState(false);
   const [formErr,  setFormErr]  = useState('');
   const [modal,    setModal]    = useState(null);
+
+  const [storageModalOpen, setStorageModalOpen] = useState(false);
+  const [storageNameDraft, setStorageNameDraft] = useState('');
+  const [storageIconDraft, setStorageIconDraft] = useState('💰');
+  const [storageSaving,    setStorageSaving]    = useState(false);
+  const [storageErr,       setStorageErr]       = useState('');
+
+  const storageName = settings?.storage_name || '';
+  const storageIcon = settings?.storage_icon || '💰';
+
+  function openStorageModal() {
+    setStorageNameDraft(storageName);
+    setStorageIconDraft(storageIcon);
+    setStorageErr('');
+    setStorageModalOpen(true);
+  }
+
+  function closeStorageModal() {
+    setStorageModalOpen(false);
+    setStorageErr('');
+  }
+
+  async function handleStorageSubmit(e) {
+    e.preventDefault();
+    if (!storageNameDraft.trim()) {
+      setStorageErr('Give it a name, e.g. GCash or Piggy Bank.');
+      return;
+    }
+    setStorageSaving(true);
+    setStorageErr('');
+    try {
+      await updateSettings({
+        storage_name: storageNameDraft.trim(),
+        storage_icon: storageIconDraft,
+      });
+      setStorageModalOpen(false);
+    } catch (err) {
+      setStorageErr(err.message);
+    } finally {
+      setStorageSaving(false);
+    }
+  }
 
   function openModal(t) {
     setType(t);
@@ -125,7 +175,6 @@ export default function Dashboard({
   const overdueBills = unpaidUrgentBills.filter(b => b.isOverdue);
   const dueSoonBills = unpaidUrgentBills.filter(b => b.isUrgent);
 
-  // Show 5 most-recent transactions on the dashboard
   const recentTx = [...transactions]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .slice(0, 5);
@@ -137,9 +186,22 @@ export default function Dashboard({
       <div className="bg-[#1F3D2B] text-white rounded-3xl p-6 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-40 h-40 bg-[#C7E26E]/10 rounded-full" />
 
+        {updateSettings && (
+          <button
+            type="button"
+            onClick={openStorageModal}
+            className="absolute top-5 right-5 z-10 flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 transition-all backdrop-blur-sm"
+          >
+            <StorageIcon icon={storageIcon} size={14} />
+            <span className="text-[11px] font-bold text-white/90 max-w-[90px] truncate">
+              {storageName || 'Set storage'}
+            </span>
+            <Pencil size={10} className="text-white/50" />
+          </button>
+        )}
+
         <p className="text-xs font-mono uppercase tracking-widest text-[#C7E26E] mb-1">Total balance</p>
 
-        {/* Balance row — buttons hidden on mobile, shown on desktop */}
         <div className="flex items-center gap-4">
           <p className="text-4xl font-serif font-semibold">{fmt(balance, currencySymbol)}</p>
           <div className="hidden md:flex gap-2">
@@ -160,7 +222,6 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Month net */}
         <div className={`flex items-center gap-1.5 mt-3 text-sm font-semibold ${netUp ? 'text-[#C7E26E]' : 'text-yellow-300'}`}>
           {netUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
           {fmt(Math.abs(monthNet), currencySymbol)} {netUp ? 'saved' : 'spent'} this month
@@ -183,7 +244,7 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Mobile action banner — deposit & withdraw ── */}
+      {/* ── Mobile action banner ── */}
       <div className="md:hidden grid grid-cols-2 gap-3">
         <button
           type="button"
@@ -335,7 +396,6 @@ export default function Dashboard({
               const chipColor = CATEGORY_COLORS[tx.category] ?? CATEGORY_COLORS.Other;
               return (
                 <li key={tx.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  {/* Icon bubble */}
                   <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
                     isDeposit ? 'bg-green-50' : 'bg-red-50'
                   }`}>
@@ -344,7 +404,6 @@ export default function Dashboard({
                       : <ArrowUpRight  size={16} className="text-red-400" />}
                   </div>
 
-                  {/* Label + category */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">
                       {tx.note || tx.category || (isDeposit ? 'Deposit' : 'Withdrawal')}
@@ -357,7 +416,6 @@ export default function Dashboard({
                     </div>
                   </div>
 
-                  {/* Amount */}
                   <p className={`text-sm font-mono font-bold shrink-0 ${
                     isDeposit ? 'text-green-700' : 'text-red-500'
                   }`}>
@@ -472,6 +530,77 @@ export default function Dashboard({
                 <button
                   type="button"
                   onClick={closeModal}
+                  className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Storage edit modal ── */}
+      {storageModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 bg-[#1F3D2B]/5 border-b border-gray-100">
+              <p className="text-sm font-bold text-[#1F3D2B]">Where do you keep your savings?</p>
+              <button
+                type="button"
+                onClick={closeStorageModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-black/5"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleStorageSubmit} className="p-5 space-y-4">
+              <label className="block">
+                <span className="text-xs text-gray-500 font-semibold">Name</span>
+                <input
+                  type="text"
+                  placeholder="e.g. GCash, BDO, Piggy Bank"
+                  value={storageNameDraft}
+                  onChange={(e) => { setStorageNameDraft(e.target.value); setStorageErr(''); }}
+                  autoFocus
+                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
+                />
+              </label>
+
+              <div>
+                <span className="text-xs text-gray-500 font-semibold">Icon</span>
+                <div className="mt-2 grid grid-cols-5 gap-2">
+                  {STORAGE_ICON_OPTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setStorageIconDraft(emoji)}
+                      className={`flex items-center justify-center h-11 rounded-xl text-xl border-2 transition-all ${
+                        storageIconDraft === emoji
+                          ? 'border-[#1F3D2B] bg-[#1F3D2B]/5'
+                          : 'border-gray-100 hover:border-gray-200'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {storageErr && <p className="text-xs text-red-500 font-semibold">{storageErr}</p>}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={storageSaving}
+                  className="flex-1 font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 bg-[#1F3D2B] text-[#C7E26E] hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {storageSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeStorageModal}
                   className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
