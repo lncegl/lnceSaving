@@ -1,46 +1,68 @@
-# Sprout Savings Tracker — Architecture Reference
+# Sprout Savings Tracker
+
+A personal savings tracker with AI-powered insights, real-time sync, and goal tracking — built with React, Supabase, and Gemini.
+
+---
 
 ## Tech Stack
-- **React 18** + Vite (frontend framework)
-- **Supabase** (Postgres DB + Auth + Realtime WebSockets)
-- **Gemini 2.5 Flash** (AI chatbot via REST API)
-- **Tailwind CSS** (utility-first styling, green/yellow theme)
-- **Recharts** (charts and data visualization)
-- **Lucide React** (icon set)
+
+- **React 18** + Vite — frontend framework
+- **Supabase** — Postgres DB + Auth + Realtime WebSockets
+- **Gemini 2.5 Flash** — AI chatbot via REST API
+- **Tailwind CSS** — utility-first styling (green/yellow theme)
+- **Recharts** — charts and data visualization
+- **Lucide React** — icon set
+- **Cloudflare Workers** — deployment via Wrangler
 
 ---
 
 ## Directory Structure
 
 ```
-sprout/
-├── supabase/
-│   └── schema.sql              ← Run this FIRST in Supabase SQL Editor
+lncesaving/
+├── public/
+│   └── alden.jpg
 │
-└── src/
-    ├── lib/
-    │   └── supabaseClient.js   ← Singleton client + typed query helpers
-    │
-    ├── services/
-    │   └── geminiService.js    ← All Gemini logic (context builder, stream)
-    │
-    ├── hooks/
-    │   └── useSavings.js       ← Single hook: data, realtime, actions
-    │
-    ├── components/
-    │   ├── Sidebar.jsx         ← Nav (desktop sidebar + mobile tab bar)
-    │   ├── Dashboard.jsx       ← Home view: balance, quick-add, goals
-    │   ├── TransactionHistory.jsx  ← Full ledger with filter/sort/delete
-    │   ├── AIChat.jsx          ← Streaming Gemini chatbot
-    │   ├── Goals.jsx           ← Goal CRUD + vine progress bars (lazy)
-    │   └── Insights.jsx        ← Charts: line, bar, pie (lazy)
-    │
-    └── App.jsx                 ← Root: auth gate, layout, tab router
+├── src/
+│   ├── components/
+│   │   ├── Activity.jsx          ← Activity feed / recent transactions view
+│   │   ├── AIChat.jsx            ← Streaming Gemini chatbot
+│   │   ├── Auth.jsx              ← Login / signup screens
+│   │   ├── Bills.jsx             ← Bills tracking view
+│   │   ├── Dashboard.jsx         ← Home view: balance, quick-add, goals
+│   │   ├── Goals.jsx             ← Goal CRUD + vine progress bars (lazy)
+│   │   ├── Insights.jsx          ← Charts: line, bar, pie (lazy)
+│   │   ├── ResetPassword.jsx     ← Password reset flow
+│   │   ├── Settings.jsx          ← User settings (currency, API key, etc.)
+│   │   ├── Sidebar.jsx           ← Nav (desktop sidebar + mobile tab bar)
+│   │   └── TransactionHistory.jsx ← Full ledger with filter/sort/delete
+│   │
+│   ├── hooks/                    ← Custom React hooks
+│   │
+│   ├── lib/
+│   │   ├── geminiService.js      ← All Gemini logic (context builder, stream)
+│   │   └── supabaseClient.js     ← Singleton client + typed query helpers
+│   │
+│   ├── App.jsx                   ← Root: auth gate, layout, tab router
+│   ├── index.css                 ← Tailwind imports + Google Fonts
+│   └── main.jsx                  ← Vite entry point
+│
+├── _redirects                    ← SPA redirect rules
+├── .env                          ← Local environment variables
+├── .env.production               ← Production environment variables
+├── .gitignore
+├── index.html
+├── package.json
+├── postcss.config.js
+├── schema.sql                    ← Run this first in Supabase SQL Editor
+├── tailwind.config.js
+├── vite.config.js
+└── wrangler.json                 ← Cloudflare Workers config
 ```
 
 ---
 
-## Data Flow Diagram
+## Data Flow
 
 ```
 Supabase (Postgres)
@@ -55,8 +77,11 @@ useSavings.js  ←──── realtime subscriptions (postgres_changes)
       ▼
 App.jsx  ──── passes slices as props ────►  Dashboard.jsx
                                        ────►  TransactionHistory.jsx
+                                       ────►  Activity.jsx
+                                       ────►  Bills.jsx
                                        ────►  Goals.jsx
                                        ────►  Insights.jsx
+                                       ────►  Settings.jsx
                                        ────►  AIChat.jsx
                                                    │
                                                    │  buildFinancialContext()
@@ -72,65 +97,15 @@ App.jsx  ──── passes slices as props ────►  Dashboard.jsx
 
 ## Supabase Tables
 
-| Table            | Key columns                                    | Notes                          |
-|------------------|------------------------------------------------|--------------------------------|
-| `transactions`   | id, user_id, type, amount, category, date, goal_id | FK → goals (SET NULL on delete) |
-| `goals`          | id, user_id, name, target_amount, target_date  | Cascades to transactions       |
-| `user_settings`  | id, user_id, gemini_api_key, currency          | One row per user               |
+| Table            | Key columns                                               | Notes                             |
+|------------------|-----------------------------------------------------------|-----------------------------------|
+| `transactions`   | id, user_id, type, amount, category, date, goal_id        | FK → goals (SET NULL on delete)   |
+| `goals`          | id, user_id, name, target_amount, target_date             | Cascades to transactions          |
+| `user_settings`  | id, user_id, gemini_api_key, currency                     | One row per user                  |
 
 **View:** `goal_progress` — pre-aggregates `saved_amount` and `progress_percent` per goal using a JOIN, so the frontend never needs to compute these.
 
-All tables have **Row Level Security** enabled. Every policy checks `auth.uid() = user_id`.
-
----
-
-## useSavings.js — Public API
-
-```js
-const {
-  // Auth
-  user,
-
-  // Raw data (from Supabase)
-  transactions, goals, settings,
-
-  // Derived/computed (useMemo)
-  balance, totalDeposited, totalWithdrawn,
-  monthNet, balanceSeries, monthlyData, categoryBreakdown,
-
-  // UI state
-  loading, error,
-
-  // Actions (all optimistic)
-  addTransaction(payload),
-  removeTransaction(id),
-  addGoal(payload),
-  removeGoal(id),
-  updateSettings(patch),
-} = useSavings();
-```
-
-### Optimistic Update Pattern
-Every mutating action in `useSavings`:
-1. Adds a temp row to local state immediately (UI updates in <1ms)
-2. Calls Supabase
-3. Replaces temp row with real DB row on success, or rolls back on error
-
----
-
-## geminiService.js — Exports
-
-| Export                | Type             | Purpose                                      |
-|-----------------------|------------------|----------------------------------------------|
-| `buildFinancialContext(params)` | `() => string` | Formats app state into Gemini-readable text |
-| `askGemini(key, msg, ctx, history)` | `async () => string` | Single-turn, resolves when done    |
-| `streamGemini(key, msg, ctx, history)` | `async generator` | Yields text chunks via SSE        |
-| `GeminiError`         | `class`          | Typed error with `.code` property            |
-
-### Why streaming?
-`streamGemini` uses Gemini's `alt=sse` endpoint. `AIChat.jsx` renders each
-chunk as it arrives, giving a typewriter effect that makes responses feel
-instant rather than waiting 3-6 seconds for a full reply.
+All tables have **Row Level Security (RLS)** enabled. Every policy checks `auth.uid() = user_id`.
 
 ---
 
@@ -144,8 +119,8 @@ npm >= 9
 
 ### 2. Install dependencies
 ```bash
-npm create vite@latest sprout -- --template react
-cd sprout
+npm create vite@latest lncesaving -- --template react
+cd lncesaving
 npm install @supabase/supabase-js recharts lucide-react
 npm install -D tailwindcss postcss autoprefixer
 npx tailwindcss init -p
@@ -170,48 +145,56 @@ export default {
 
 ### 5. Run Supabase schema
 1. Go to **Supabase Dashboard → SQL Editor → New Query**
-2. Paste the contents of `supabase/schema.sql`
+2. Paste the contents of `schema.sql`
 3. Click **Run**
 
-### 6. Environment variables (`.env.local`)
+### 6. Environment variables
+
+Create `.env` for local development:
 ```
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGc...
 ```
 
-> **Never commit `.env.local` to git.**
+Create `.env.production` for Cloudflare deployment:
+```
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGc...
+```
+
+> **Never commit these files to git.** Both are listed in `.gitignore`.
 
 ### 7. Copy source files
 Copy all files from `src/` into your Vite project's `src/` folder.
 
-### 8. Run
+### 8. Run locally
 ```bash
 npm run dev
+```
+
+### 9. Deploy to Cloudflare Workers
+```bash
+npx wrangler deploy
 ```
 
 ---
 
 ## Security Notes
 
-1. **Gemini API key** — stored in `user_settings.gemini_api_key` in Supabase.
-   It is protected by RLS (only the owner can read it). For a production app
-   used by many people, proxy the Gemini call through a Supabase Edge Function
-   instead of exposing the key to the browser.
+1. **Gemini API key** — stored in `user_settings.gemini_api_key` in Supabase, protected by RLS (only the owner can read it). For a multi-user production app, proxy Gemini calls through a Supabase Edge Function instead of exposing the key to the browser.
 
-2. **Supabase anon key** — safe to expose in the browser. It only grants access
-   to what RLS policies allow (i.e., the user's own rows).
+2. **Supabase anon key** — safe to expose in the browser. It only grants access to what RLS policies allow (the user's own rows).
 
-3. **RLS is mandatory** — never disable it. Every table has policies that
-   restrict reads and writes to `auth.uid() = user_id`.
+3. **RLS is mandatory** — never disable it. Every table has policies restricting reads and writes to `auth.uid() = user_id`.
 
 ---
 
 ## Extending the App
 
-| Feature              | Where to add                          |
-|----------------------|---------------------------------------|
-| Recurring budgets    | New `budgets` table + `useBudgets` hook |
-| Export to CSV        | Utility fn in `src/utils/export.js`  |
-| Push notifications   | Supabase Edge Functions + cron job   |
-| Multi-currency       | Add `exchange_rate` to `user_settings`|
-| Receipt photo upload | Supabase Storage + column in `transactions` |
+| Feature               | Where to add                            |
+|-----------------------|-----------------------------------------|
+| Recurring budgets     | New `budgets` table + `useBudgets` hook |
+| Export to CSV         | Utility fn in `src/utils/export.js`     |
+| Push notifications    | Supabase Edge Functions + cron job      |
+| Multi-currency        | Add `exchange_rate` to `user_settings`  |
+| Receipt photo upload  | Supabase Storage + column in `transactions` |
