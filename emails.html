@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sprout Email Templates</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f0f0; padding: 2rem; }
+    .template-section { margin-bottom: 3rem; }
+    .template-label { font-size: 13px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<!-- ===================== 0. CONFIRMATION ===================== -->
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <!-- Header -->
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <!-- Bigger Logo Image Container -->
+        <td style="vertical-align:middle; padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px; width:auto; display:block; border-radius:10px; overflow:hidden;" />
+        </td>
+        <!-- Aligned Text Content Container -->
+        <td style="vertical-align:middle;">
+          <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #ffffff; line-height: 1.1;">Sprout</div>
+          <div style="font-size: 11px; font-weight: 600; color: #8FBF6F; letter-spacing: 0.4px; margin-top: 3px; line-height: 1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <!-- Body -->
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">Confirm your email address</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">Thank you for registering with Sprout! Please follow the link below to verify your email address and complete your account setup.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F3D2B;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-weight:500;">Confirm email address</a>
+    <p style="font-size:13px;color:#999;margin:1.5rem 0 0;line-height:1.6;">If you didn't create a Sprout account, you can safely ignore this email.</p>
+  </div>
+  
+  <!-- Footer -->
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B; text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B; text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B; text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  
+  <!-- Copyright -->
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+
+<!-- ===================== 1. INVITATION ===================== -->
+<div class="template-section">
+<div class="template-label">1 — Invitation</div>
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px;width:auto;display:block;border-radius:10px;overflow:hidden;" />
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;">Sprout</div>
+          <div style="font-size:11px;font-weight:600;color:#8FBF6F;letter-spacing:0.4px;margin-top:3px;line-height:1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">You've been invited!</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">You've been invited by <strong>Sprout Admin (lnce)</strong> to join Sprout. Click the button below to accept your invitation and set up your account.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F3D2B;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-weight:500;">Accept invitation</a>
+    <p style="font-size:13px;color:#999;margin:1.5rem 0 0;line-height:1.6;">If you weren't expecting this invitation, you can safely ignore this email. This link will expire after 24 hours.</p>
+  </div>
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B;text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B;text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B;text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===================== 2. MAGIC LINK / OTP ===================== -->
+<div class="template-section">
+<div class="template-label">2 — Magic Link / OTP</div>
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px;width:auto;display:block;border-radius:10px;overflow:hidden;" />
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;">Sprout</div>
+          <div style="font-size:11px;font-weight:600;color:#8FBF6F;letter-spacing:0.4px;margin-top:3px;line-height:1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">Your sign-in link</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">We received a request to sign in to your Sprout account. Use the button below to sign in instantly — no password needed.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F3D2B;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-weight:500;">Sign in to Sprout</a>
+
+    <!-- OTP block -->
+    <p style="color:#555;line-height:1.7;margin:1.5rem 0 0.5rem;">Or use this one-time code:</p>
+    <div style="display:inline-block;background:#f4f9f4;border:1.5px dashed #1F3D2B;border-radius:8px;padding:12px 28px;margin-bottom:0;">
+      <span style="font-size:28px;font-weight:700;color:#1F3D2B;letter-spacing:8px;font-family:monospace;">{{ .Token }}</span>
+    </div>
+
+    <p style="font-size:13px;color:#999;margin:1.5rem 0 0;line-height:1.6;">This link and code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+  </div>
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B;text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B;text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B;text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===================== 3. CHANGE EMAIL ADDRESS ===================== -->
+<div class="template-section">
+<div class="template-label">3 — Change Email Address</div>
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px;width:auto;display:block;border-radius:10px;overflow:hidden;" />
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;">Sprout</div>
+          <div style="font-size:11px;font-weight:600;color:#8FBF6F;letter-spacing:0.4px;margin-top:3px;line-height:1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">Confirm your new email address</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 0.5rem;">We received a request to update the email address on your Sprout account. Your new email address is:</p>
+    <p style="font-weight:600;color:#1F3D2B;font-size:15px;margin:0 0 1.25rem;">{{ .NewEmail }}</p>
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">Click the button below to confirm and apply this change.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F3D2B;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-weight:500;">Confirm new email</a>
+    <p style="font-size:13px;color:#999;margin:1.5rem 0 0;line-height:1.6;">If you didn't request an email change, please contact Sprout Admin immediately — someone may be trying to access your account.</p>
+  </div>
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B;text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B;text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B;text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===================== 4. RESET PASSWORD ===================== -->
+<div class="template-section">
+<div class="template-label">4 — Reset Password</div>
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px;width:auto;display:block;border-radius:10px;overflow:hidden;" />
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;">Sprout</div>
+          <div style="font-size:11px;font-weight:600;color:#8FBF6F;letter-spacing:0.4px;margin-top:3px;line-height:1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">Reset your password</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">We received a request to reset the password for your Sprout account. Click the button below to choose a new password. This link is valid for 1 hour.</p>
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F3D2B;color:#ffffff;text-decoration:none;padding:10px 24px;border-radius:6px;font-weight:500;">Reset password</a>
+    <p style="font-size:13px;color:#999;margin:1.5rem 0 0;line-height:1.6;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+  </div>
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B;text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B;text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B;text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+</div>
+
+<!-- ===================== 5. REAUTHENTICATION ===================== -->
+<div class="template-section">
+<div class="template-label">5 — Reauthentication</div>
+<div style="max-width:520px;margin:0 auto;font-family:sans-serif;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+  <div style="background:#1F3D2B;padding:1.2rem 2rem;">
+    <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:12px;">
+          <img src="https://ceypyxqwsuxspzsvmcxz.supabase.co/storage/v1/object/public/email-assets/sprout-logo.png" alt="Sprout" style="height:42px;width:auto;display:block;border-radius:10px;overflow:hidden;" />
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#ffffff;line-height:1.1;">Sprout</div>
+          <div style="font-size:11px;font-weight:600;color:#8FBF6F;letter-spacing:0.4px;margin-top:3px;line-height:1;">SAVINGS TRACKER</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div style="padding:2rem;background:#ffffff;">
+    <h2 style="font-size:20px;margin:0 0 0.75rem;color:#111;">Verify it's you</h2>
+    <p style="color:#555;line-height:1.7;margin:0 0 1rem;">A sensitive action was requested on your Sprout account. To continue, please verify your identity using the one-time code below.</p>
+
+    <!-- OTP block -->
+    <div style="display:inline-block;background:#f4f9f4;border:1.5px dashed #1F3D2B;border-radius:8px;padding:12px 28px;margin-bottom:1rem;">
+      <span style="font-size:28px;font-weight:700;color:#1F3D2B;letter-spacing:8px;font-family:monospace;">{{ .Token }}</span>
+    </div>
+
+    <p style="color:#555;line-height:1.7;margin:0 0 1.5rem;">Enter this code in the app to complete verification. It expires in 10 minutes.</p>
+    <p style="font-size:13px;color:#999;margin:0;line-height:1.6;">If you didn't initiate this action, please contact Sprout Admin immediately — your account may be at risk.</p>
+  </div>
+  <div style="border-top:1px solid #e0e0e0;padding:1.25rem 2rem;background:#f9f9f9;">
+    <p style="font-size:13px;font-weight:600;margin:0 0 8px;">Need help? Contact Sprout Admin (lncegl):</p>
+    <p style="font-size:13px;margin:4px 0;">📧 <a href="mailto:lanceizah3@gmail.com" style="color:#1F3D2B;text-decoration:none;">lanceizah3@gmail.com</a></p>
+    <p style="font-size:13px;margin:4px 0;">📞 <a href="tel:09618845757" style="color:#1F3D2B;text-decoration:none;">09618845757</a></p>
+    <p style="font-size:13px;margin:4px 0;">👤 <a href="https://www.facebook.com/lance.crisanto" target="_blank" style="color:#1F3D2B;text-decoration:none;">Lance Crisanto Gil</a></p>
+  </div>
+  <div style="padding:0.75rem 2rem;text-align:center;background:#ffffff;">
+    <p style="font-size:12px;color:#aaa;margin:0;">© 2026 Sprout Admin (lnce). All rights reserved.</p>
+  </div>
+</div>
+</div>
+
+</body>
+</html>
