@@ -1,6 +1,5 @@
 // src/components/Sidebar.jsx
 import { Sprout, LayoutDashboard, Target, BarChart3, MessageCircle, Settings, Receipt, ChevronLeft } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',    icon: LayoutDashboard },
@@ -19,7 +18,7 @@ const PAGE_TITLES = {
   settings:   'Settings',
 };
 
-export default function Sidebar({ activeTab, setActiveTab, balance, currencySymbol = '₱', userName }) {
+export default function Sidebar({ activeTab, setActiveTab, balance, currencySymbol = '₱', userName, scrolled = false }) {
   const fmtBalance = (n) =>
     currencySymbol +
     Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -95,25 +94,26 @@ export default function Sidebar({ activeTab, setActiveTab, balance, currencySymb
         </div>
       </div>
 
-      {/* ── Mobile: Settings back bar ── */}
+      {/* ── Mobile: floating back button for settings only ── */}
       {isSettings && (
-        <div
-          className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#1F3D2B]"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.12)' }}
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          aria-label="Go back"
+          className="md:hidden fixed left-4 z-50 flex items-center justify-center w-9 h-9 rounded-full active:scale-95 select-none"
+          style={{
+            top: scrolled ? '12px' : '32px',
+            transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, transform 0.3s ease',
+            opacity: scrolled ? 0.7 : 1,
+            transform: scrolled ? 'scale(0.85)' : 'scale(1)',
+            background: 'rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+          }}
         >
-          <div className="flex items-center gap-3 px-4 pt-5 pb-5">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-1 text-[#A5C9A0] active:opacity-60 transition-opacity select-none"
-            >
-              <ChevronLeft size={20} className="text-[#A5C9A0]" />
-              <span className="text-sm font-medium text-[#A5C9A0]">Back</span>
-            </button>
-            <span className="font-serif text-white font-semibold text-lg leading-none">
-              Settings
-            </span>
-          </div>
-        </div>
+          <ChevronLeft size={18} className="text-[#1F3D2B]" />
+        </button>
       )}
 
       {/* ── Mobile top nav bar — hidden on settings ── */}
@@ -124,8 +124,6 @@ export default function Sidebar({ activeTab, setActiveTab, balance, currencySymb
         >
           {/* Top row */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
-
-            {/* Left: logo + Sprout + page title stacked beside */}
             <div
               onClick={() => setActiveTab('dashboard')}
               className="flex items-center gap-2.5 cursor-pointer select-none"
@@ -138,23 +136,20 @@ export default function Sidebar({ activeTab, setActiveTab, balance, currencySymb
                   Sprout
                 </span>
                 <span className="text-[#8FBF6F] text-[11px] font-medium leading-none mt-0.5 tracking-wide">
-                  {activeTab === 'dashboard'
-                    ? 'Savings Tracker'
-                    : PAGE_TITLES[activeTab]}
+                  {activeTab === 'dashboard' ? 'Savings Tracker' : PAGE_TITLES[activeTab]}
                 </span>
               </div>
             </div>
 
-            {/* Right: settings button */}
             <button
               onClick={() => setActiveTab('settings')}
-              className="w-8 h-8 rounded-full bg-[#2D5640] flex items-center justify-center transition-colors active:bg-[#C7E26E] active:text-[#1F3D2B]"
+              className="w-8 h-8 rounded-full bg-[#2D5640] flex items-center justify-center transition-colors active:bg-[#C7E26E]"
             >
               <Settings size={15} className="text-[#A5C9A0]" />
             </button>
           </div>
 
-          {/* Bottom row — icon tabs */}
+          {/* Icon tabs */}
           <nav className="flex border-t border-[#2D5640]/60">
             {NAV_ITEMS.map(({ id, icon: Icon }) => (
               <button

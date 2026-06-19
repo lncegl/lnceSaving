@@ -23,13 +23,22 @@ export default function App() {
   } = useSavings();
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [scrolled, setScrolled] = useState(false);
   const mainRef = useRef(null);
 
-  // Reset scroll position whenever the tab changes
+  // Reset scroll + scrolled flag on tab change
   useEffect(() => {
-    if (mainRef.current) {
-      mainRef.current.scrollTop = 0;
-    }
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    setScrolled(false);
+  }, [activeTab]);
+
+  // Track scroll position for back button animation
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || activeTab !== 'settings') return;
+    const handleScroll = () => setScrolled(el.scrollTop > 40);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
   }, [activeTab]);
 
   console.log('📊 [App.jsx Monitor] — User State:', {
@@ -158,6 +167,7 @@ export default function App() {
           balance={balance ?? 0}
           currencySymbol={activeCurrency}
           userName={user?.email || 'User Workspace'}
+          scrolled={scrolled}
         />
       </aside>
 
@@ -170,6 +180,7 @@ export default function App() {
           balance={balance ?? 0}
           currencySymbol={activeCurrency}
           userName={user?.email || 'User Workspace'}
+          scrolled={scrolled}
         />
       </div>
 
@@ -193,7 +204,13 @@ export default function App() {
             />
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 pt-[124px] md:pt-6">
+          <div
+            className={`max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-6 md:py-8 ${
+              activeTab === 'settings'
+                ? 'pt-14'
+                : 'pt-[124px]'
+            } md:pt-6`}
+          >
             {renderActiveContent()}
           </div>
         )}
