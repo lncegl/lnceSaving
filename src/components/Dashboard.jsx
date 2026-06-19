@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock } from 'lucide-react';
 
 const TX_CATEGORIES = [
   'Other','Salary','Allowance','Gift','Freelance',
@@ -13,6 +13,19 @@ function fmt(n, symbol = '₱') {
   return symbol + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function today() { return new Date().toISOString().slice(0, 10); }
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  // Parse as local date to avoid UTC timezone shifting
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  const diff = Math.round((todayMidnight - date) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return `${diff}d ago`;
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
 
 function VineProgress({ percent }) {
   const p = Math.min(100, Math.max(0, Number(percent) || 0));
@@ -32,9 +45,25 @@ function VineProgress({ percent }) {
   );
 }
 
+// ── Category colour chips ──────────────────────────────────────────────────
+const CATEGORY_COLORS = {
+  Salary:           'bg-green-100 text-green-800',
+  Allowance:        'bg-teal-100 text-teal-800',
+  Gift:             'bg-pink-100 text-pink-800',
+  Freelance:        'bg-indigo-100 text-indigo-800',
+  Groceries:        'bg-yellow-100 text-yellow-800',
+  Bills:            'bg-red-100 text-red-800',
+  Transport:        'bg-sky-100 text-sky-800',
+  Entertainment:    'bg-purple-100 text-purple-800',
+  Health:           'bg-rose-100 text-rose-800',
+  'Savings Transfer':'bg-lime-100 text-lime-800',
+  Other:            'bg-gray-100 text-gray-600',
+};
+
 export default function Dashboard({
   balance, monthNet, balanceSeries, goals,
   unpaidUrgentBills = [],
+  transactions = [],
   currencySymbol = '₱', addTransaction, setActiveTab,
 }) {
   const [type,     setType]     = useState('deposit');
@@ -90,6 +119,11 @@ export default function Dashboard({
   const netUp = monthNet >= 0;
   const overdueBills = unpaidUrgentBills.filter(b => b.isOverdue);
   const dueSoonBills = unpaidUrgentBills.filter(b => b.isUrgent);
+
+  // Show 5 most-recent transactions on the dashboard
+  const recentTx = [...transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
 
   return (
     <div className="space-y-4">
@@ -261,6 +295,69 @@ export default function Dashboard({
                   </div>
                   <VineProgress percent={pct} />
                   <p className="text-xs text-gray-400">{Math.min(100, pct).toFixed(1)}% complete</p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* ── Recent Activity ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-[#1F3D2B]" />
+            <h2 className="font-serif text-lg text-[#1F3D2B]">Recent activity</h2>
+          </div>
+          <button
+            onClick={() => setActiveTab('activity')}
+            className="text-xs text-gray-400 hover:text-[#1F3D2B] font-semibold transition-colors"
+          >
+            View all →
+          </button>
+        </div>
+
+        {recentTx.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-center text-gray-400">
+            <ArrowDownLeft size={24} className="mb-2 text-gray-200" />
+            <p className="text-sm font-semibold">No transactions yet</p>
+            <p className="text-xs mt-0.5">Your deposits and withdrawals will appear here.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-50">
+            {recentTx.map((tx) => {
+              const isDeposit = tx.type === 'deposit';
+              const chipColor = CATEGORY_COLORS[tx.category] ?? CATEGORY_COLORS.Other;
+              return (
+                <li key={tx.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  {/* Icon bubble */}
+                  <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${
+                    isDeposit ? 'bg-green-50' : 'bg-red-50'
+                  }`}>
+                    {isDeposit
+                      ? <ArrowDownLeft size={16} className="text-green-600" />
+                      : <ArrowUpRight  size={16} className="text-red-400" />}
+                  </div>
+
+                  {/* Label + category */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {tx.note || tx.category || (isDeposit ? 'Deposit' : 'Withdrawal')}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${chipColor}`}>
+                        {tx.category || 'Other'}
+                      </span>
+                      <span className="text-[10px] text-gray-400">{fmtDate(tx.date)}</span>
+                    </div>
+                  </div>
+
+                  {/* Amount */}
+                  <p className={`text-sm font-mono font-bold shrink-0 ${
+                    isDeposit ? 'text-green-700' : 'text-red-500'
+                  }`}>
+                    {isDeposit ? '+' : '-'}{fmt(tx.amount, currencySymbol)}
+                  </p>
                 </li>
               );
             })}

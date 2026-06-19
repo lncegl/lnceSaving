@@ -89,6 +89,7 @@ export default function App() {
             balanceSeries={balanceSeries}
             goals={computedGoals}
             unpaidUrgentBills={unpaidUrgentBills}
+            transactions={transactions}
             addTransaction={addTransaction}
             currencySymbol={activeCurrency}
             setActiveTab={setActiveTab}
