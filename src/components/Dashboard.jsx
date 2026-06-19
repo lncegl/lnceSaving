@@ -44,7 +44,7 @@ export default function Dashboard({
   const [goalId,   setGoalId]   = useState('');
   const [saving,   setSaving]   = useState(false);
   const [formErr,  setFormErr]  = useState('');
-  const [modal,    setModal]    = useState(null); // null | 'deposit' | 'withdrawal'
+  const [modal,    setModal]    = useState(null);
 
   function openModal(t) {
     setType(t);
@@ -92,19 +92,18 @@ export default function Dashboard({
   const dueSoonBills = unpaidUrgentBills.filter(b => b.isUrgent);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
       {/* ── Hero balance card ── */}
       <div className="bg-[#1F3D2B] text-white rounded-3xl p-6 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-40 h-40 bg-[#C7E26E]/10 rounded-full" />
 
-        {/* Label */}
         <p className="text-xs font-mono uppercase tracking-widest text-[#C7E26E] mb-1">Total balance</p>
 
-        {/* Balance + buttons on the same row */}
+        {/* Balance row — buttons hidden on mobile, shown on desktop */}
         <div className="flex items-center gap-4">
           <p className="text-4xl font-serif font-semibold">{fmt(balance, currencySymbol)}</p>
-          <div className="flex gap-2">
+          <div className="hidden md:flex gap-2">
             <button
               type="button"
               onClick={() => openModal('deposit')}
@@ -145,67 +144,85 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Bills banner — always shown ── */}
-        {(() => {
-          const hasOverdue = overdueBills.length > 0;
-          const hasUrgent  = dueSoonBills.length > 0;
-          const isAlert    = hasOverdue || hasUrgent;
+      {/* ── Mobile action banner — deposit & withdraw ── */}
+      <div className="md:hidden grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => openModal('deposit')}
+          className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#1F3D2B] text-[#C7E26E] font-bold text-sm shadow-sm active:scale-95 transition-transform"
+        >
+          + Deposit
+        </button>
+        <button
+          type="button"
+          onClick={() => openModal('withdrawal')}
+          className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold text-sm shadow-sm active:scale-95 transition-transform"
+        >
+          - Withdraw
+        </button>
+      </div>
 
-          return (
-            <div className={`border rounded-2xl p-4 space-y-2 transition-colors ${
-              hasOverdue
-                ? 'bg-red-50 border-red-200'
-                : hasUrgent
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : 'bg-white border-gray-100'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={16} className={`shrink-0 ${
-                    hasOverdue ? 'text-red-500' : hasUrgent ? 'text-yellow-600' : 'text-gray-300'
-                  }`} />
-                  <p className={`text-sm font-bold ${
-                    hasOverdue ? 'text-red-700' : hasUrgent ? 'text-yellow-800' : 'text-gray-400'
-                  }`}>
-                    {hasOverdue && hasUrgent
-                      ? 'Bills overdue & due soon'
-                      : hasOverdue
-                        ? `${overdueBills.length} bill${overdueBills.length > 1 ? 's' : ''} overdue`
-                        : hasUrgent
-                          ? `${dueSoonBills.length} bill${dueSoonBills.length > 1 ? 's' : ''} due soon`
-                          : 'All bills are on track'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('bills')}
-                  className={`text-xs font-bold underline underline-offset-2 transition-colors ${
-                    hasOverdue ? 'text-red-600 hover:text-red-800' : hasUrgent ? 'text-yellow-700 hover:text-yellow-900' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  View bills →
-                </button>
+      {/* ── Bills banner ── */}
+      {(() => {
+        const hasOverdue = overdueBills.length > 0;
+        const hasUrgent  = dueSoonBills.length > 0;
+        const isAlert    = hasOverdue || hasUrgent;
+
+        return (
+          <div className={`border rounded-2xl p-4 space-y-2 transition-colors ${
+            hasOverdue
+              ? 'bg-red-50 border-red-200'
+              : hasUrgent
+                ? 'bg-yellow-50 border-yellow-200'
+                : 'bg-white border-gray-100'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className={`shrink-0 ${
+                  hasOverdue ? 'text-red-500' : hasUrgent ? 'text-yellow-600' : 'text-gray-300'
+                }`} />
+                <p className={`text-sm font-bold ${
+                  hasOverdue ? 'text-red-700' : hasUrgent ? 'text-yellow-800' : 'text-gray-400'
+                }`}>
+                  {hasOverdue && hasUrgent
+                    ? 'Bills overdue & due soon'
+                    : hasOverdue
+                      ? `${overdueBills.length} bill${overdueBills.length > 1 ? 's' : ''} overdue`
+                      : hasUrgent
+                        ? `${dueSoonBills.length} bill${dueSoonBills.length > 1 ? 's' : ''} due soon`
+                        : 'All bills are on track'}
+                </p>
               </div>
-
-              {isAlert && (
-                <ul className="space-y-1">
-                  {unpaidUrgentBills.map(b => (
-                    <li key={b.id} className="flex items-center justify-between text-xs text-gray-700">
-                      <span className="flex items-center gap-1.5">
-                        <Receipt size={11} className="shrink-0" />
-                        <span className="font-semibold">{b.name}</span>
-                        {b.isOverdue
-                          ? <span className="text-red-600 font-bold">· Overdue</span>
-                          : <span className="text-yellow-600">· Due in {b.daysUntilDue}d</span>}
-                      </span>
-                      <span className="font-mono font-bold">{fmt(b.amount, currencySymbol)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <button
+                type="button"
+                onClick={() => setActiveTab('bills')}
+                className={`text-xs font-bold underline underline-offset-2 transition-colors ${
+                  hasOverdue ? 'text-red-600 hover:text-red-800' : hasUrgent ? 'text-yellow-700 hover:text-yellow-900' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                View bills →
+              </button>
             </div>
-          );
-        })()}
+
+            {isAlert && (
+              <ul className="space-y-1">
+                {unpaidUrgentBills.map(b => (
+                  <li key={b.id} className="flex items-center justify-between text-xs text-gray-700">
+                    <span className="flex items-center gap-1.5">
+                      <Receipt size={11} className="shrink-0" />
+                      <span className="font-semibold">{b.name}</span>
+                      {b.isOverdue
+                        ? <span className="text-red-600 font-bold">· Overdue</span>
+                        : <span className="text-yellow-600">· Due in {b.daysUntilDue}d</span>}
+                    </span>
+                    <span className="font-mono font-bold">{fmt(b.amount, currencySymbol)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Goals at a glance ── */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -251,12 +268,10 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Transaction modal popup ── */}
+      {/* ── Transaction modal ── */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
-
-            {/* Modal header */}
             <div className={`flex items-center justify-between px-5 py-4 ${
               modal === 'deposit' ? 'bg-green-50 border-b border-green-100' : 'bg-yellow-50 border-b border-yellow-100'
             }`}>
@@ -277,7 +292,6 @@ export default function Dashboard({
               </button>
             </div>
 
-            {/* Modal form */}
             <form onSubmit={handleSubmit} className="p-5 space-y-3">
               <label className="block">
                 <span className="text-xs text-gray-500 font-semibold">Amount</span>
