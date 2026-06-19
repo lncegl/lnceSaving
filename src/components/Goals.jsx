@@ -579,7 +579,7 @@ export default function Goals({
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
               <span className="text-xs text-gray-500 font-semibold">Target amount</span>
               <div className="relative mt-1">
@@ -599,7 +599,7 @@ export default function Goals({
               </div>
             </label>
 
-            <label className="block">
+            <label className="block min-w-0">
               <span className="text-xs text-gray-500 font-semibold">Target date (optional)</span>
               <input
                 type="date"
