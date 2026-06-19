@@ -48,8 +48,6 @@ lncesaving/
 │   └── main.jsx                  ← Vite entry point
 │
 ├── _redirects                    ← SPA redirect rules
-├── .env                          ← Local environment variables
-├── .env.production               ← Production environment variables
 ├── .gitignore
 ├── index.html
 ├── package.json
