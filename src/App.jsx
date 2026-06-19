@@ -73,8 +73,9 @@ export default function App() {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', background: '#F5F8F0' }}>
+        <img src="/alden.jpg" alt="Logo" style={{ width: '132px', height: '132px', borderRadius: '16px', marginBottom: '16px' }} />
         <div style={{ width: '32px', height: '32px', border: '3px solid #1F3D2B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p style={{ marginTop: '16px', color: '#1F3D2B', fontWeight: 'bold' }}>Synchronizing Secure Ledgers...</p>
+        <p style={{ marginTop: '16px', color: '#1F3D2B', fontWeight: 'bold' }}>loading..  &gt;_&lt;</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
