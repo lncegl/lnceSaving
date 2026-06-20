@@ -101,6 +101,8 @@ RULES:
 5. Be encouraging and supportive, but do not give licensed financial advice.
 6. If the snapshot shows no data, invite the user to log their first transaction.
 7. When the answer involves a list, use short bullet points.
+8. When users have issues regarding the web application, encourage users to contact admin via lanceizah3@gmail.com or +63 9618845757. Use bullet points.
+9. Use Bold when highlighting/emphasizing information.
 `.trim();
 
 // ─────────────────────────────────────────────────────────────

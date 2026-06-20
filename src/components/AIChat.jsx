@@ -20,9 +20,9 @@ import { streamGemini, buildFinancialContext, GeminiError } from '../lib/geminiS
 const SUGGESTIONS = [
   "What's my current balance?",
   "How much have I saved this month?",
-  "Am I on track with any of my goals?",
+  "Are my bills on track?",
   "Which category am I spending the most on?",
-  "Give me a tip to save more next month.",
+  "I have a problem regarding Sprout application.",
 ];
 
 // ─────────────────────────────────────────────────────────────
