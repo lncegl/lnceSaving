@@ -474,6 +474,7 @@
         supabase.from('transactions').delete().eq('user_id', user.id),
         supabase.from('goals').delete().eq('user_id', user.id),
         supabase.from('bill_payments').delete().eq('user_id', user.id),
+        supabase.from('bills').delete().eq('user_id', user.id),
       ]);
       setTransactions([]);
       setGoals([]);
