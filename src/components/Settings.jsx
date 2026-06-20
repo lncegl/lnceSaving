@@ -7,7 +7,7 @@
 //   resetData       – async () => void  — clears all savings data
 //
 // Sections:
-//   1. Profile         — email, member since
+//   1. Profile         — email, member since, PWA installation button
 //   2. Currency        — symbol + code that drive all fmt() calls
 //   3. AI Assistant    — Gemini API key management
 //   4. Security        — reset password, change email, reset data (accordion)
@@ -18,9 +18,10 @@ import { useState } from 'react';
 import {
   User, Globe, KeyRound, ShieldCheck, LogOut,
   CheckCircle2, AlertCircle, Eye, EyeOff,
-  Sprout, Trash2, RotateCcw, Mail, ChevronDown,
+  Sprout, Trash2, RotateCcw, Mail, ChevronDown, Download
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // ── Currency options ──────────────────────────────────────────
 const CURRENCIES = [
@@ -91,6 +92,7 @@ function Feedback({ success, error }) {
 function ProfileSection({ user }) {
   const joinDate = formatJoinDate(user?.created_at);
   const emailInitial = user?.email?.[0]?.toUpperCase() ?? '?';
+  const { canInstall, install } = usePWAInstall();
 
   return (
     <Section
@@ -98,20 +100,33 @@ function ProfileSection({ user }) {
       title="Profile"
       description="Your account information"
     >
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#1F3D2B] flex items-center justify-center text-[#C7E26E] font-serif text-2xl font-semibold shrink-0 select-none">
-          {emailInitial}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{user?.email ?? '—'}</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Member since {joinDate}
-          </p>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="inline-block w-2 h-2 rounded-full bg-green-400" />
-            <span className="text-xs text-gray-400 font-medium">Active account</span>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#1F3D2B] flex items-center justify-center text-[#C7E26E] font-serif text-2xl font-semibold shrink-0 select-none">
+            {emailInitial}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate">{user?.email ?? '—'}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Member since {joinDate}
+            </p>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-400" />
+              <span className="text-xs text-gray-400 font-medium">Active account</span>
+            </div>
           </div>
         </div>
+
+        {/* PWA Install Button Option */}
+        {canInstall && (
+          <button
+            onClick={install}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[#F0F7EC] text-[#1F3D2B] border border-[#C7E26E]/40 rounded-xl text-xs font-bold hover:bg-[#E3F2D7] transition-all self-start sm:self-auto shadow-sm"
+          >
+            <Download size={14} className="text-[#4F7E5B]" />
+            📲 Install App
+          </button>
+        )}
       </div>
     </Section>
   );

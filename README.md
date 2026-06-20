@@ -13,6 +13,7 @@ A personal savings tracker with AI-powered insights, real-time sync, and goal tr
 - **Recharts** — charts and data visualization
 - **Lucide React** — icon set
 - **Cloudflare Workers** — deployment via Wrangler
+- **vite-plugin-pwa** — PWA manifest, service worker, and offline caching via Workbox
 
 ---
 
