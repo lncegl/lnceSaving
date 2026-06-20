@@ -477,6 +477,7 @@
       ]);
       setTransactions([]);
       setGoals([]);
+      setBills([]);   
       setBillPayments([]);
       await supabase.auth.signOut();
     }, [user]);
