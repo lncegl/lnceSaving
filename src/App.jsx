@@ -208,6 +208,10 @@ export default function App() {
             style={{ paddingTop: 'calc(108px + 1rem)' }}
           >
             <AIChat
+              balance={balance}
+              totalDeposited={totalDeposited}
+              totalWithdrawn={totalWithdrawn}
+              monthNet={monthNet}
               transactions={transactions}
               goals={computedGoals}
               currencySymbol={activeCurrency}
