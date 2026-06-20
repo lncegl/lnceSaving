@@ -177,14 +177,18 @@ export async function deleteBill(id) {
   if (error) throw error;
 }
 
-/** Fetch all payment records for the current user for a given month key (e.g. "2025-06"). */
-export async function fetchBillPayments(userId, monthKey) {
+/**
+ * Fetch ALL payment records for the user (not filtered by period).
+ * Bills now have mixed recurrence types (weekly/monthly/quarterly/annually),
+ * each with its own period_key format — filtering by "is this paid right now"
+ * happens client-side in useSavings, per bill.
+ */
+export async function fetchBillPayments(userId) {
   if (!userId) return [];
   const { data, error } = await supabase
     .from('bill_payments')
     .select('*')
-    .eq('user_id', userId)
-    .eq('month_key', monthKey);
+    .eq('user_id', userId);
   if (error) throw error;
   return data;
 }
@@ -209,12 +213,12 @@ export async function deleteBillPayment(id) {
   if (error) throw error;
 }
 
-/** Delete all payment records for a user for a given month (full month reset). */
-export async function resetBillPayments(userId, monthKey) {
+/** Delete all payment records for a user for a given period_key (e.g. "M-2026-06", "W-2026-06-15"). */
+export async function resetBillPayments(userId, periodKey) {
   const { error } = await supabase
     .from('bill_payments')
     .delete()
     .eq('user_id', userId)
-    .eq('month_key', monthKey);
+    .eq('period_key', periodKey);
   if (error) throw error;
 }

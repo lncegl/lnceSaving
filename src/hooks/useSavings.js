@@ -1,4 +1,4 @@
-  // src/hooks/useSavings.js
+// src/hooks/useSavings.js
   import { useState, useEffect, useCallback, useMemo } from 'react';
   import {
     supabase,
@@ -16,12 +16,40 @@
     fetchBillPayments,
     insertBillPayment,
     deleteBillPayment as dbDeleteBillPayment,
-    resetBillPayments as dbResetBillPayments,
   } from '../lib/supabaseClient';
 
   function currentMonthPrefix() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  // Computes the current "period_key" for a bill based on its frequency.
+  // This determines whether a given bill counts as "paid" right now.
+  // For weekly bills, due_day doubles as the weekday number (0=Sunday ... 6=Saturday),
+  // matching the convention used in Bills.jsx / the bills table.
+  function getCurrentPeriodKey(bill) {
+    const today = new Date();
+    const frequency = bill?.frequency || 'monthly';
+
+    if (frequency === 'weekly') {
+      const targetDay = bill?.due_day ?? 1; // default Monday
+      const diff = (today.getDay() - targetDay + 7) % 7;
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - diff);
+      return `W-${weekStart.toISOString().slice(0, 10)}`; // e.g. "W-2026-06-15"
+    }
+
+    if (frequency === 'quarterly') {
+      const quarter = Math.floor(today.getMonth() / 3) + 1;
+      return `Q-${today.getFullYear()}-Q${quarter}`; // e.g. "Q-2026-Q2"
+    }
+
+    if (frequency === 'annually') {
+      return `Y-${today.getFullYear()}`; // e.g. "Y-2026"
+    }
+
+    // monthly (default)
+    return `M-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`; // e.g. "M-2026-06"
   }
 
   export function useSavings() {
@@ -76,8 +104,6 @@
         setError(null);
 
         try {
-          const monthKey = currentMonthPrefix();
-
           let txData = [];
           try { txData = await fetchTransactions(user.id); }
           catch (e) { console.error("[useSavings] fetchTransactions failed:", e); }
@@ -95,7 +121,7 @@
           catch (e) { console.error("[useSavings] fetchBills failed:", e); }
 
           let billPaymentsData = [];
-          try { billPaymentsData = await fetchBillPayments(user.id, monthKey); }
+          try { billPaymentsData = await fetchBillPayments(user.id); }
           catch (e) { console.error("[useSavings] fetchBillPayments failed:", e); }
 
           if (cancelled) return;
@@ -169,7 +195,7 @@
           event: '*', schema: 'public', table: 'bill_payments',
           filter: `user_id=eq.${user.id}`,
         }, () => {
-          fetchBillPayments(user.id, currentMonthPrefix())
+          fetchBillPayments(user.id)
             .then(d => setBillPayments(Array.isArray(d) ? d : []))
             .catch(err => console.error('[useSavings] Realtime bill_payments sync error:', err));
         })
@@ -288,17 +314,30 @@
           return { date: t.date, balance: Math.max(0, running) };
         });
 
-        // ── Bills with paid status ──
-        const paidBillIds = new Set(billPayments.map(p => p.bill_id));
+        // ── Bills with paid status (per-bill period, frequency-aware) ──
         const today = new Date();
         const currentDay = today.getDate();
 
         const billsWithStatus = (Array.isArray(bills) ? bills : []).map(b => {
-          const isPaid = paidBillIds.has(b.id);
-          const daysUntilDue = b.due_day - currentDay;
+          const periodKey = getCurrentPeriodKey(b);
+          const payment = billPayments.find(
+            p => p.bill_id === b.id && p.period_key === periodKey
+          ) ?? null;
+          const isPaid = !!payment;
+
+          // due_day urgency applies to monthly/quarterly/annually bills.
+          // Weekly bills are urgent based on days until their due_day (weekday number).
+          let daysUntilDue;
+          if (b.frequency === 'weekly') {
+            const targetDay = b.due_day ?? 1;
+            daysUntilDue = (targetDay - today.getDay() + 7) % 7;
+          } else {
+            daysUntilDue = b.due_day - currentDay;
+          }
+
           const isOverdue = !isPaid && daysUntilDue < 0;
           const isUrgent = !isPaid && daysUntilDue >= 0 && daysUntilDue <= 3;
-          const payment = billPayments.find(p => p.bill_id === b.id) ?? null;
+
           return {
             ...b,
             isPaid,
@@ -306,6 +345,7 @@
             isUrgent,
             daysUntilDue,
             payment,
+            periodKey,
           };
         });
 
@@ -427,8 +467,8 @@
         );
       }
 
-      const monthKey = currentMonthPrefix();
       const bill = bills.find(b => b.id === billId);
+      const periodKey = getCurrentPeriodKey(bill);
 
       // 1. Record the transaction (deducts from balance)
       const tx = await insertTransaction({
@@ -443,9 +483,9 @@
 
       // 2. Record the payment marker
       const payment = await insertBillPayment({
-        user_id:   user.id,
-        bill_id:   billId,
-        month_key: monthKey,
+        user_id:    user.id,
+        bill_id:    billId,
+        period_key: periodKey,
       });
 
       if (tx)      setTransactions(prev => [tx, ...prev]);
@@ -454,6 +494,21 @@
       return { tx, payment };
     }, [user, derived.balance, bills]);
 
+    const markAsPaid = useCallback(async (billId) => {
+      if (!user) throw new Error('User must be logged in.');
+      const bill = bills.find(b => b.id === billId);
+      const periodKey = getCurrentPeriodKey(bill);
+
+      const payment = await insertBillPayment({
+        user_id:    user.id,
+        bill_id:    billId,
+        period_key: periodKey,
+      });
+
+      if (payment) setBillPayments(prev => [...prev, payment]);
+      return payment;
+    }, [user, bills]);
+    
     const unpayBill = useCallback(async (billId) => {
       const payment = billPayments.find(p => p.bill_id === billId);
       if (!payment) return;
@@ -463,14 +518,14 @@
 
     const resetMonthlyBills = useCallback(async () => {
       if (!user) throw new Error('User must be logged in.');
-      const monthKey = currentMonthPrefix();
-      await dbResetBillPayments(user.id, monthKey);
+      await Promise.all(billPayments.map(p => dbDeleteBillPayment(p.id)));
       setBillPayments([]);
-    }, [user]);
+    }, [user, billPayments]);
 
     const resetData = useCallback(async () => {
       if (!user) throw new Error('User must be logged in.');
       await Promise.all([
+        
         supabase.from('transactions').delete().eq('user_id', user.id),
         supabase.from('goals').delete().eq('user_id', user.id),
         supabase.from('bill_payments').delete().eq('user_id', user.id),
@@ -501,6 +556,7 @@
       removeBill,
       updateBill,
       payBill,
+      markAsPaid,
       unpayBill,
       resetMonthlyBills,
       resetData,

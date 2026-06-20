@@ -20,7 +20,7 @@ export default function App() {
     billsWithStatus, unpaidUrgentBills,
     addTransaction, removeTransaction,
     addGoal, removeGoal, updateSettings,
-    addBill, removeBill, updateBill, payBill, unpayBill, resetMonthlyBills,
+    addBill, removeBill, updateBill, payBill, markAsPaid, unpayBill, resetMonthlyBills,
     resetData,
   } = useSavings();
 
@@ -128,6 +128,7 @@ export default function App() {
             removeBill={removeBill}
             updateBill={updateBill}
             payBill={payBill}
+            markAsPaid={markAsPaid}
             unpayBill={unpayBill}
             resetMonthlyBills={resetMonthlyBills}
           />

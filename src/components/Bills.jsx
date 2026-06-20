@@ -3,7 +3,7 @@ import { useState } from 'react';
 import {
   Receipt, Plus, Trash2, CheckCircle2, Clock, AlertCircle,
   AlertTriangle, RotateCcw, CalendarDays, Tag, Banknote,
-  Pencil, X, Check, CalendarClock,
+  Pencil, X, Check, CalendarClock, CreditCard,
 } from 'lucide-react';
 
 const BILL_CATEGORIES = [
@@ -16,6 +16,43 @@ const BILL_CATEGORIES = [
 const DAYS_OF_WEEK = [
   'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 ];
+
+const FREQUENCY_META = {
+  weekly:    { label: 'Weekly',    unit: '/ week',    color: 'purple' },
+  monthly:   { label: 'Monthly',   unit: '/ month',   color: 'blue'   },
+  quarterly: { label: 'Quarterly', unit: '/ quarter', color: 'orange' },
+  annually:  { label: 'Annually',  unit: '/ year',    color: 'teal'   },
+};
+
+// Tailwind needs literal class names, so dynamic `bg-${color}-50` won't
+// compile — this map keeps the literal classes one per color.
+const FREQUENCY_BADGE_CLASSES = {
+  purple: 'text-purple-500 bg-purple-50 border-purple-200',
+  blue:   'text-blue-500 bg-blue-50 border-blue-200',
+  orange: 'text-orange-500 bg-orange-50 border-orange-200',
+  teal:   'text-teal-600 bg-teal-50 border-teal-200',
+};
+
+const FREQUENCY_PILL_CLASSES = {
+  purple: 'text-purple-600 bg-purple-50 border-purple-200',
+  blue:   'text-blue-600 bg-blue-50 border-blue-200',
+  orange: 'text-orange-700 bg-orange-50 border-orange-200',
+  teal:   'text-teal-700 bg-teal-50 border-teal-200',
+};
+
+const FREQUENCY_FILTER_ACTIVE_CLASSES = {
+  purple: 'bg-purple-700 text-white border-purple-700',
+  blue:   'bg-blue-700 text-white border-blue-700',
+  orange: 'bg-orange-700 text-white border-orange-700',
+  teal:   'bg-teal-700 text-white border-teal-700',
+};
+
+const FREQUENCY_CARD_BORDER_CLASSES = {
+  purple: 'border-purple-100',
+  blue:   'border-blue-100',
+  orange: 'border-orange-100',
+  teal:   'border-teal-100',
+};
 
 function fmt(n, symbol = '₱') {
   return (
@@ -33,29 +70,26 @@ function ordinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-/**
- * Compute status fields for a bill.
- * For weekly bills, due_day is 0–6 (Sun–Sat).
- * For monthly bills, due_day is 1–31.
- */
 function computeStatus(bill) {
   const now = new Date();
 
   if (bill.frequency === 'weekly') {
-    const todayDow = now.getDay(); // 0=Sun … 6=Sat
-    const billDow  = bill.due_day; // 0–6
+    const todayDow = now.getDay();
+    const billDow  = bill.due_day;
     let diff = billDow - todayDow;
-    if (diff < 0) diff += 7;      // days until next occurrence
+    if (diff < 0) diff += 7;
 
     return {
       ...bill,
       daysUntilDue: diff,
       isUrgent:  !bill.isPaid && diff <= 2 && diff >= 0,
-      isOverdue: false, // weekly bills recur; treat past-day-of-week as "due this week"
+      isOverdue: false,
     };
   }
 
-  // monthly
+  // monthly, quarterly, annually all use due_day as "day of the current
+  // calendar month" — quarterly/annually just reset less often (handled by
+  // the period_key logic in useSavings, not here).
   const todayDate = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const effectiveDue = Math.min(bill.due_day, daysInMonth);
@@ -71,6 +105,7 @@ function computeStatus(bill) {
 
 function StatusPill({ bill }) {
   const isWeekly = bill.frequency === 'weekly';
+  const meta = FREQUENCY_META[bill.frequency] || FREQUENCY_META.monthly;
 
   if (bill.isPaid)
     return (
@@ -94,19 +129,20 @@ function StatusPill({ bill }) {
 
   if (isWeekly)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 border border-purple-200 rounded-full px-2.5 py-1">
+      <span className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2.5 py-1 border ${FREQUENCY_PILL_CLASSES.purple}`}>
         <CalendarClock size={12} /> Every {DAYS_OF_WEEK[bill.due_day]}
       </span>
     );
 
+  // monthly, quarterly, annually — same "due on day X" display, just labeled
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1">
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2.5 py-1 border ${FREQUENCY_PILL_CLASSES[meta.color] || FREQUENCY_PILL_CLASSES.blue}`}>
       <CalendarDays size={12} /> Due {ordinal(bill.due_day)}
     </span>
   );
 }
 
-// ── Pay Confirmation Modal ──────────────────────────────────────────────────
+// ── Pay Confirmation Modal (deducts balance) ────────────────────────────────
 function PayConfirmModal({ bill, balance, currencySymbol, onConfirm, onCancel }) {
   const amount       = Number(bill.amount);
   const balanceAfter = balance - amount;
@@ -119,13 +155,12 @@ function PayConfirmModal({ bill, balance, currencySymbol, onConfirm, onCancel })
           <div className="p-2 bg-green-50 rounded-xl">
             <Banknote size={22} className="text-green-600" />
           </div>
-          <h4 className="font-serif font-bold text-gray-900">Confirm Payment</h4>
+          <h4 className="font-serif font-bold text-gray-900">Confirm payment</h4>
         </div>
 
         <p className="text-sm text-gray-600 leading-relaxed">
-          You're about to mark{' '}
-          <span className="font-bold">"{bill.name}"</span> as paid. This will
-          deduct{' '}
+          You're about to pay{' '}
+          <span className="font-bold">"{bill.name}"</span>. This will deduct{' '}
           <span className="font-mono font-bold text-[#1F3D2B]">
             {fmt(amount, currencySymbol)}
           </span>{' '}
@@ -150,8 +185,8 @@ function PayConfirmModal({ bill, balance, currencySymbol, onConfirm, onCancel })
           </div>
         </div>
 
-        <p className="text-xs text-red-500 bg-red-50 p-2.5 rounded-xl border border-red-100">
-          Warning: This action will deduct funds directly from your main dashboard savings balance card.
+        <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-100 mb-4">
+          This will deduct funds directly from your main dashboard savings balance.
         </p>
 
         {insufficient && (
@@ -161,13 +196,53 @@ function PayConfirmModal({ bill, balance, currencySymbol, onConfirm, onCancel })
         )}
 
         <div className="mt-5 flex gap-2.5 justify-end">
+          <button type="button" onClick={onConfirm} disabled={insufficient}
+            className="px-5 py-2 bg-[#1F3D2B] text-[#C7E26E] rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-opacity">
+            Yes, pay now
+          </button>
           <button type="button" onClick={onCancel}
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50">
             Cancel
           </button>
-          <button type="button" onClick={onConfirm} disabled={insufficient}
-            className="px-5 py-2 bg-[#1F3D2B] text-[#C7E26E] rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-opacity">
-            Yes, Mark as Paid
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Mark as Paid Confirmation Modal (no balance deduction) ──────────────────
+function MarkAsPaidConfirmModal({ bill, balance, currencySymbol, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 bg-green-50 rounded-xl">
+            <CheckCircle2 size={22} className="text-green-600" />
+          </div>
+          <h4 className="font-serif font-bold text-gray-900">Mark as paid?</h4>
+        </div>
+
+        <p className="text-sm text-gray-600 leading-relaxed">
+          This will mark{' '}
+          <span className="font-bold">"{bill.name}"</span> as paid.{' '}
+          <span className="font-bold">No money will be deducted</span> — use this
+          when you've already paid outside the app or via auto-debit.
+        </p>
+
+        <div className="my-4 p-3.5 bg-green-50 rounded-xl border border-green-100 text-xs text-green-700 flex items-center gap-2">
+          <CheckCircle2 size={14} className="shrink-0" />
+          Your balance will remain at{' '}
+          <span className="font-mono font-bold ml-1">{fmt(balance, currencySymbol)}</span>
+        </div>
+
+        <div className="mt-5 flex gap-2.5 justify-end">
+          <button type="button" onClick={onConfirm}
+            className="px-5 py-2 bg-gray-100 text-gray-800 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+            Yes, mark as paid
+          </button>
+          <button type="button" onClick={onCancel}
+            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50">
+            Cancel
           </button>
         </div>
       </div>
@@ -247,8 +322,10 @@ function EditForm({ bill, currencySymbol, onSave, onCancel, updateBill }) {
           <select value={frequency}
             onChange={e => { setFrequency(e.target.value); setDueDay(''); setErr(''); }}
             className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]">
-            <option value="monthly">Monthly</option>
             <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="annually">Annually</option>
           </select>
         </label>
       </div>
@@ -266,7 +343,13 @@ function EditForm({ bill, currencySymbol, onSave, onCancel, updateBill }) {
           </>
         ) : (
           <>
-            <span className="text-xs text-gray-500 font-semibold">Due day of month</span>
+            <span className="text-xs text-gray-500 font-semibold">
+              {frequency === 'quarterly'
+                ? 'Due day of the month (each quarter)'
+                : frequency === 'annually'
+                  ? 'Due day of the month (each year)'
+                  : 'Due day of month'}
+            </span>
             <input type="number" min="1" max="31" value={dueDay}
               onChange={e => { setDueDay(e.target.value); setErr(''); }}
               className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]" />
@@ -311,33 +394,46 @@ function EditForm({ bill, currencySymbol, onSave, onCancel, updateBill }) {
 }
 
 // ── Bill Card ───────────────────────────────────────────────────────────────
-function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBill, updateBill }) {
-  const [confirming,       setConfirming]       = useState(false);
-  const [deleting,         setDeleting]         = useState(false);
-  const [paying,           setPaying]           = useState(false);
-  const [showPayConfirm,   setShowPayConfirm]   = useState(false);
-  const [showUnpayConfirm, setShowUnpayConfirm] = useState(false);
-  const [editing,          setEditing]          = useState(false);
-  const [err,              setErr]              = useState('');
+function BillCard({ bill, balance, currencySymbol, payBill, markAsPaid = async () => {}, unpayBill, removeBill, updateBill }) {
+  const [confirming,           setConfirming]           = useState(false);
+  const [deleting,             setDeleting]             = useState(false);
+  const [processing,           setProcessing]           = useState(false);
+  const [showPayConfirm,       setShowPayConfirm]       = useState(false);
+  const [showMarkConfirm,      setShowMarkConfirm]      = useState(false);
+  const [showUnpayConfirm,     setShowUnpayConfirm]     = useState(false);
+  const [editing,              setEditing]              = useState(false);
+  const [err,                  setErr]                  = useState('');
 
   const isWeekly = bill.frequency === 'weekly';
+  const meta = FREQUENCY_META[bill.frequency] || FREQUENCY_META.monthly;
 
+  // Pay — deducts balance
   async function handlePay() {
     setShowPayConfirm(false);
-    setPaying(true);
+    setProcessing(true);
     setErr('');
     try { await payBill(bill.id, Number(bill.amount)); }
     catch (e) { setErr(e.message); }
-    finally { setPaying(false); }
+    finally { setProcessing(false); }
+  }
+
+  // Mark as paid — no balance deduction, no transaction inserted
+  async function handleMarkAsPaid() {
+    setShowMarkConfirm(false);
+    setProcessing(true);
+    setErr('');
+    try { await markAsPaid(bill.id); }
+    catch (e) { setErr(e.message); }
+    finally { setProcessing(false); }
   }
 
   async function handleUnpay() {
     setShowUnpayConfirm(false);
-    setPaying(true);
+    setProcessing(true);
     setErr('');
     try { await unpayBill(bill.id); }
     catch (e) { setErr(e.message); }
-    finally { setPaying(false); }
+    finally { setProcessing(false); }
   }
 
   async function handleDelete() {
@@ -354,8 +450,8 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
           ? 'border-red-200'
           : bill.isUrgent
             ? 'border-yellow-200'
-            : isWeekly
-              ? 'border-purple-100'
+            : bill.frequency !== 'monthly'
+              ? (FREQUENCY_CARD_BORDER_CLASSES[meta.color] || 'border-gray-100')
               : 'border-gray-100'
     }`}>
       {/* Header */}
@@ -365,9 +461,9 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
             <h3 className={`font-serif text-lg leading-snug truncate ${bill.isPaid ? 'text-gray-400 line-through' : 'text-[#1F3D2B]'}`}>
               {bill.name}
             </h3>
-            {isWeekly && (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-purple-500 bg-purple-50 border border-purple-200 rounded-full px-2 py-0.5">
-                Weekly
+            {bill.frequency !== 'monthly' && (
+              <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest rounded-full px-2 py-0.5 border ${FREQUENCY_BADGE_CLASSES[meta.color] || FREQUENCY_BADGE_CLASSES.blue}`}>
+                {meta.label}
               </span>
             )}
           </div>
@@ -378,7 +474,11 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
             <span className="text-xs text-gray-400 flex items-center gap-1">
               {isWeekly
                 ? <><CalendarClock size={10} /> Every {DAYS_OF_WEEK[bill.due_day]}</>
-                : <><CalendarDays size={10} /> Due every {ordinal(bill.due_day)}</>}
+                : <><CalendarDays size={10} /> Due every {ordinal(bill.due_day)}{
+                    bill.frequency === 'quarterly' ? ' (quarterly)'
+                    : bill.frequency === 'annually' ? ' (yearly)'
+                    : ''
+                  }</>}
             </span>
           </div>
         </div>
@@ -429,8 +529,8 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
             <span className="font-mono font-bold text-[#1F3D2B] text-xl">
               {fmt(bill.amount, currencySymbol)}
             </span>
-            {isWeekly && (
-              <span className="text-xs text-gray-400 ml-1.5">/ week</span>
+            {bill.frequency !== 'monthly' && (
+              <span className="text-xs text-gray-400 ml-1.5">{meta.unit}</span>
             )}
           </div>
           {bill.note && (
@@ -450,7 +550,7 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
         />
       )}
 
-      {/* Pay / Unpay */}
+      {/* Action area */}
       {!editing && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           {bill.isPaid ? (
@@ -467,47 +567,73 @@ function BillCard({ bill, balance, currencySymbol, payBill, unpayBill, removeBil
               </button>
             </div>
           ) : (
-            <button type="button"
-              onClick={() => { if (Number(bill.amount) > balance) return; setShowPayConfirm(true); }}
-              disabled={paying || Number(bill.amount) > balance}
-              className="w-full py-2.5 rounded-xl text-sm font-bold bg-[#1F3D2B] text-[#C7E26E] disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-              <Banknote size={15} />
-              {paying
-                ? 'Processing…'
-                : Number(bill.amount) > balance
-                  ? 'Insufficient balance'
-                  : `Mark as Paid — ${fmt(bill.amount, currencySymbol)}`}
-            </button>
+            <div className="flex gap-2">
+              {/* Pay — deducts balance, 62% */}
+              <button
+                type="button"
+                onClick={() => { if (Number(bill.amount) > balance) return; setShowPayConfirm(true); }}
+                disabled={processing || Number(bill.amount) > balance}
+                style={{ flex: "72 1 0%" }}
+                className="py-2.5 rounded-xl text-sm font-bold bg-[#1F3D2B] text-[#C7E26E] disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              >
+                <Banknote size={15} />
+                {processing
+                  ? 'Processing…'
+                  : Number(bill.amount) > balance
+                    ? 'Insufficient balance'
+                    : 'Pay'}
+              </button>
+
+              {/* Mark as paid — no deduction, 38% */}
+              <button
+                type="button"
+                onClick={() => setShowMarkConfirm(true)}
+                disabled={processing}
+                style={{ flex: "28 1 0%" }}
+                className="py-2.5 px-4 rounded-xl text-sm font-bold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center justify-center"
+              >
+                Mark as paid
+              </button>
+            </div>
           )}
           {err && <p className="text-xs text-red-500 font-semibold mt-2">{err}</p>}
         </div>
       )}
 
+      {/* Pay modal — deducts balance */}
       {showPayConfirm && (
         <PayConfirmModal
           bill={bill} balance={balance} currencySymbol={currencySymbol}
           onConfirm={handlePay} onCancel={() => setShowPayConfirm(false)} />
       )}
 
+      {/* Mark as paid modal — no deduction */}
+      {showMarkConfirm && (
+        <MarkAsPaidConfirmModal
+          bill={bill} balance={balance} currencySymbol={currencySymbol}
+          onConfirm={handleMarkAsPaid} onCancel={() => setShowMarkConfirm(false)} />
+      )}
+
+      {/* Undo modal */}
       {showUnpayConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white border border-gray-200 rounded-2xl max-w-sm w-full p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-yellow-50 rounded-xl"><AlertTriangle size={22} className="text-yellow-500" /></div>
-              <h4 className="font-serif font-bold text-gray-900">Undo Payment?</h4>
+              <h4 className="font-serif font-bold text-gray-900">Undo payment?</h4>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">
               This will mark <span className="font-bold">"{bill.name}"</span> as unpaid.
-              The balance deduction will <span className="font-bold">NOT</span> be reversed automatically.
+              Any balance deduction already made will <span className="font-bold">NOT</span> be reversed automatically.
             </p>
             <div className="mt-5 flex gap-2.5 justify-end">
+              <button type="button" onClick={handleUnpay}
+                className="px-5 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600">
+                Yes, undo
+              </button>
               <button type="button" onClick={() => setShowUnpayConfirm(false)}
                 className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50">
                 Cancel
-              </button>
-              <button type="button" onClick={handleUnpay}
-                className="px-5 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600">
-                Yes, Undo
               </button>
             </div>
           </div>
@@ -526,6 +652,7 @@ export default function Bills({
   removeBill,
   updateBill,
   payBill,
+  markAsPaid = async () => {},
   unpayBill,
   resetMonthlyBills,
 }) {
@@ -541,14 +668,30 @@ export default function Bills({
   const [showReset,  setShowReset]  = useState(false);
   const [resetting,  setResetting]  = useState(false);
 
-  // Enrich bills with computed status
   const enriched = billsWithStatus.map(computeStatus);
 
-  const filtered = enriched.filter(b => {
-    if (filter === 'unpaid')  return !b.isPaid;
-    if (filter === 'paid')    return b.isPaid;
-    if (filter === 'weekly')  return b.frequency === 'weekly';
-    if (filter === 'monthly') return b.frequency !== 'weekly';
+  // Sort priority: overdue -> due/urgent -> upcoming -> paid (paid always last)
+  function statusRank(b) {
+    if (b.isPaid) return 3;
+    if (b.isOverdue) return 0;
+    if (b.isUrgent) return 1;
+    return 2;
+  }
+
+  const sorted = [...enriched].sort((a, b) => {
+    const rankDiff = statusRank(a) - statusRank(b);
+    if (rankDiff !== 0) return rankDiff;
+    // within the same rank, soonest due date first
+    return (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0);
+  });
+
+  const filtered = sorted.filter(b => {
+    if (filter === 'unpaid')    return !b.isPaid;
+    if (filter === 'paid')      return b.isPaid;
+    if (filter === 'weekly')    return b.frequency === 'weekly';
+    if (filter === 'monthly')   return b.frequency === 'monthly' || !b.frequency;
+    if (filter === 'quarterly') return b.frequency === 'quarterly';
+    if (filter === 'annually')  return b.frequency === 'annually';
     return true;
   });
 
@@ -557,8 +700,10 @@ export default function Bills({
   const totalUnpaid   = totalMonthly - totalPaid;
   const paidCount     = enriched.filter(b => b.isPaid).length;
   const urgentCount   = enriched.filter(b => b.isUrgent || b.isOverdue).length;
-  const weeklyCount   = enriched.filter(b => b.frequency === 'weekly').length;
-  const monthlyCount  = enriched.length - weeklyCount;
+  const weeklyCount    = enriched.filter(b => b.frequency === 'weekly').length;
+  const monthlyCount   = enriched.filter(b => b.frequency === 'monthly' || !b.frequency).length;
+  const quarterlyCount = enriched.filter(b => b.frequency === 'quarterly').length;
+  const annuallyCount  = enriched.filter(b => b.frequency === 'annually').length;
 
   const now        = new Date();
   const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -624,7 +769,6 @@ export default function Bills({
             ))}
           </div>
 
-          {/* Month header + reset */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-[#1F3D2B]">{monthLabel}</p>
@@ -646,17 +790,19 @@ export default function Bills({
           {/* Filter tabs */}
           <div className="flex gap-2 flex-wrap">
             {[
-              { value: 'all',     label: `All (${enriched.length})` },
-              { value: 'unpaid',  label: `Unpaid (${enriched.length - paidCount})` },
-              { value: 'paid',    label: `Paid (${paidCount})` },
-              ...(weeklyCount > 0  ? [{ value: 'weekly',  label: `Weekly (${weeklyCount})` }]  : []),
-              ...(monthlyCount > 0 ? [{ value: 'monthly', label: `Monthly (${monthlyCount})` }] : []),
-            ].map(({ value, label }) => (
+              { value: 'all',        label: `All (${enriched.length})` },
+              { value: 'unpaid',     label: `Unpaid (${enriched.length - paidCount})` },
+              { value: 'paid',       label: `Paid (${paidCount})` },
+              ...(weeklyCount > 0    ? [{ value: 'weekly',    label: `Weekly (${weeklyCount})`,    color: 'purple' }] : []),
+              ...(monthlyCount > 0   ? [{ value: 'monthly',   label: `Monthly (${monthlyCount})`,   color: 'blue'   }] : []),
+              ...(quarterlyCount > 0 ? [{ value: 'quarterly', label: `Quarterly (${quarterlyCount})`, color: 'orange' }] : []),
+              ...(annuallyCount > 0  ? [{ value: 'annually',  label: `Annually (${annuallyCount})`, color: 'teal'   }] : []),
+            ].map(({ value, label, color }) => (
               <button key={value} type="button" onClick={() => setFilter(value)}
                 className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
                   filter === value
-                    ? value === 'weekly'
-                      ? 'bg-purple-700 text-white border-purple-700'
+                    ? color
+                      ? (FREQUENCY_FILTER_ACTIVE_CLASSES[color] || 'bg-[#1F3D2B] text-[#C7E26E] border-[#1F3D2B]')
                       : 'bg-[#1F3D2B] text-[#C7E26E] border-[#1F3D2B]'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                 }`}>
@@ -674,6 +820,7 @@ export default function Bills({
                 balance={balance}
                 currencySymbol={currencySymbol}
                 payBill={payBill}
+                markAsPaid={markAsPaid}
                 unpayBill={unpayBill}
                 removeBill={removeBill}
                 updateBill={updateBill}
@@ -729,13 +876,14 @@ export default function Bills({
               <select value={frequency}
                 onChange={e => { setFrequency(e.target.value); setDueDay(''); setFormErr(''); }}
                 className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]">
-                <option value="monthly">Monthly</option>
                 <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="annually">Annually</option>
               </select>
             </label>
           </div>
 
-          {/* Due day — changes based on frequency */}
           <label className="block">
             {frequency === 'weekly' ? (
               <>
@@ -750,7 +898,13 @@ export default function Bills({
               </>
             ) : (
               <>
-                <span className="text-xs text-gray-500 font-semibold">Due day of month</span>
+                <span className="text-xs text-gray-500 font-semibold">
+                  {frequency === 'quarterly'
+                    ? 'Due day of the month (each quarter)'
+                    : frequency === 'annually'
+                      ? 'Due day of the month (each year)'
+                      : 'Due day of month'}
+                </span>
                 <input type="number" min="1" max="31" placeholder="e.g. 15"
                   value={dueDay} onChange={e => { setDueDay(e.target.value); setFormErr(''); }}
                   required
@@ -801,13 +955,13 @@ export default function Bills({
               Use this at the start of a new billing cycle. Balance deductions already made will not be reversed.
             </p>
             <div className="mt-5 flex gap-2.5 justify-end">
+              <button type="button" onClick={handleReset} disabled={resetting}
+                className="px-5 py-2 bg-[#1F3D2B] text-[#C7E26E] rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50">
+                {resetting ? 'Resetting…' : 'Yes, reset'}
+              </button>
               <button type="button" onClick={() => setShowReset(false)}
                 className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50">
                 Cancel
-              </button>
-              <button type="button" onClick={handleReset} disabled={resetting}
-                className="px-5 py-2 bg-[#1F3D2B] text-[#C7E26E] rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50">
-                {resetting ? 'Resetting…' : 'Yes, Reset'}
               </button>
             </div>
           </div>
