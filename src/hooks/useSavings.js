@@ -468,6 +468,19 @@
       setBillPayments([]);
     }, [user]);
 
+    const resetData = useCallback(async () => {
+      if (!user) throw new Error('User must be logged in.');
+      await Promise.all([
+        supabase.from('transactions').delete().eq('user_id', user.id),
+        supabase.from('goals').delete().eq('user_id', user.id),
+        supabase.from('bill_payments').delete().eq('user_id', user.id),
+      ]);
+      setTransactions([]);
+      setGoals([]);
+      setBillPayments([]);
+      await supabase.auth.signOut();
+    }, [user]);
+
     return {
       ...derived,
       transactions,
@@ -488,5 +501,6 @@
       payBill,
       unpayBill,
       resetMonthlyBills,
+      resetData,
     };
   }

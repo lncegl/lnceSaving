@@ -21,6 +21,7 @@ export default function App() {
     addTransaction, removeTransaction,
     addGoal, removeGoal, updateSettings,
     addBill, removeBill, updateBill, payBill, unpayBill, resetMonthlyBills,
+    resetData,
   } = useSavings();
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -160,6 +161,7 @@ export default function App() {
             user={user}
             settings={settings}
             updateSettings={updateSettings}
+            resetData={resetData}
           />
         );
       default:
