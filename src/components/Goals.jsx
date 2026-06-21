@@ -206,12 +206,7 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
 
       {actionType === 'deposit' ? (
         <div className="space-y-3">
-          {remainingToGoal <= 0 ? (
-            <p className="text-xs text-green-700 font-semibold bg-green-50 border border-green-100 rounded-xl p-2.5">
-              🎉 This goal is fully funded! Maximum cap of {fmt(targetAmount, currencySymbol)} achieved.
-            </p>
-          ) : (
-            <>
+          <>
               <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -251,7 +246,6 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
                 </div>
               )}
             </>
-          )}
         </div>
       ) : (
         <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -377,11 +371,12 @@ function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currenc
 
   setSaving(true);
   try {
-    // 1. Save goal metadata (no saved_amount — that lives in transactions)
+    // 1. Save goal metadata including saved_amount so progress is persisted
     await onSave({
       name:          name.trim(),
       target_amount: n,
       target_date:   targetDate || null,
+      saved_amount:  newSaved,
     });
 
     // 2. Only fire a transaction when increasing progress (wallet → goal)
