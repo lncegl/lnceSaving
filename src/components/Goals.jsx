@@ -92,13 +92,12 @@ function StatusPill({ days, percent }) {
     );
   if (days <= 14)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-2.5 py-1">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-[#F0F7EC] border border-[#C7E26E]/60 rounded-full px-2.5 py-1">
         <Clock size={12} /> {days}d left
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1">
-      <CalendarDays size={12} /> {days}d left
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-500/10 border border-blue-500/20 backdrop-blur-sm rounded-full px-2.5 py-1">      <CalendarDays size={12} /> {days}d left
     </span>
   );
 }
@@ -207,34 +206,44 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
       {actionType === 'deposit' ? (
         <div className="space-y-3">
           <>
-              <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Amount"
-                    value={amount}
-                    onChange={(e) => { setAmount(e.target.value); setErr(''); }}
-                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"                  />
+              {remainingToGoal <= 0 && (
+                <div className="flex items-center gap-2 bg-[#DDEFD5] border border-[#9CCF7A] rounded-xl px-3 py-2">
+                  <Sun size={14} className="text-[#1F3D2B] shrink-0" />
+                  <p className="text-xs text-[#1F3D2B] font-semibold">
+                    Goal reached! You can keep adding or create a new challenge.
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDeposit}
-                  disabled={saving}
-                  className="px-4 py-2 rounded-xl text-sm font-bold bg-[#1F3D2B] text-[#C7E26E] disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
-                >
-                  {saving ? '…' : '↑ Add'}
-                </button>
+              )}
+              {remainingToGoal > 0 && (
+                <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Amount"
+                      value={amount}
+                      onChange={(e) => { setAmount(e.target.value); setErr(''); }}
+                      className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"                  />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDeposit}
+                    disabled={saving}
+                    className="px-4 py-2 rounded-xl text-sm font-bold bg-[#1F3D2B] text-[#C7E26E] disabled:opacity-50 hover:opacity-90 transition-opacity shrink-0"
+                  >
+                    {saving ? '…' : '↑ Add'}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Note (optional)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"              />
               </div>
-              <input
-                type="text"
-                placeholder="Note (optional)"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"              />
-            </div>
+              )}
 
               {inputNum > 0 && !err && (
                 <div className="flex items-start gap-2 bg-green-50 border border-green-100 rounded-xl p-2.5 text-xs text-green-800">
@@ -350,7 +359,6 @@ function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currenc
   const newSavedNum      = parseFloat(progressInput) || 0;
   const parsedTarget     = parseFloat(targetAmt) || 0;
   const previewPct       = parsedTarget > 0 ? Math.min(100, (newSavedNum / parsedTarget) * 100) : 0;
-  // delta: positive = more allocated to goal (wallet goes down), negative = less (wallet goes up)
   const balanceDelta     = newSavedNum - savedAmount;
   const projectedBalance = balance - balanceDelta;
   const progressChanged  = progressInput !== String(savedAmount) && !isNaN(newSavedNum);
@@ -371,21 +379,17 @@ function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currenc
 
   setSaving(true);
   try {
-    // 1. Save goal metadata including saved_amount so progress is persisted
     await onSave({
       name:          name.trim(),
       target_amount: n,
       target_date:   targetDate || null,
-      saved_amount:  newSaved,
     });
 
-    // 2. Only fire a transaction when increasing progress (wallet → goal)
-    // Decreasing is skipped — goal progress reflects actual transaction history
     const delta = Math.round((newSaved - savedAmount) * 100) / 100;
-    if (delta > 0 && onTransaction) {
+    if (delta !== 0 && onTransaction) {
       await onTransaction({
-        type:     'deposit',
-        amount:   delta,
+        type:     delta > 0 ? 'deposit' : 'withdrawal',
+        amount:   Math.abs(delta),
         category: 'Savings Transfer',
         note:     `Manual progress adjustment for ${name.trim()}`,
         date:     today(),
@@ -440,7 +444,6 @@ function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currenc
         </label>
       </div>
 
-      {/* Goal balance / progress field */}
       <label className="block">
         <span className="text-xs text-gray-500 font-semibold">Goal balance (amount saved so far)</span>
         <div className="relative mt-1">
@@ -456,7 +459,6 @@ function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currenc
         </div>
       </label>
 
-      {/* Live preview — only shown when goal balance is changed */}
       {progressChanged && (
         <div className="bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2.5 text-xs space-y-1.5">
           <p className="font-semibold text-[#1F3D2B] flex items-center gap-1">
@@ -621,22 +623,13 @@ function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction, edit
           </div>
 
           {daily && remaining > 0 && (
-            <div className="mt-3 flex items-center gap-2 bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2">
-              <TrendingUp size={14} className="text-green-700 shrink-0" />
-              <p className="text-xs text-green-800 font-semibold">
+            <div className="mt-3 flex items-center gap-2 bg-[#D8EFCF] border border-[#9CCF7A] rounded-xl px-3 py-2">
+              <TrendingUp size={14} className="text-[#1F3D2B] shrink-0" />
+              <p className="text-xs text-[#1F3D2B] font-semibold">
                 Save {fmt(daily, currencySymbol)}/day to hit your target on time.
               </p>
             </div>
           )}
-          {percent >= 100 && (
-            <div className="mt-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2">
-              <Sun size={14} className="text-yellow-500 shrink-0" />
-              <p className="text-xs text-yellow-800 font-semibold">
-                Goal reached! You can keep adding or create a new challenge.
-              </p>
-            </div>
-          )}
-
           <QuickActions
             goalId={g.id}
             goalName={g.name}
