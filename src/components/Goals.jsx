@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import {
   Target, Plus, Trash2, Leaf, Sun, CalendarDays,
-  TrendingUp, AlertCircle, CheckCircle2, Clock, Info, AlertTriangle
+  TrendingUp, AlertCircle, CheckCircle2, Clock, Info, AlertTriangle,
+  Pencil, X, Save,
 } from 'lucide-react';
 
 function fmt(n, symbol = '₱') {
@@ -341,9 +342,181 @@ function QuickActions({ goalId, goalName, savedAmount, targetAmount, balance, ad
   );
 }
 
-function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction }) {
+function EditGoalForm({ g, onCancel, onSave, onTransaction, balance = 0, currencySymbol = '₱' }) {
+  const [name,          setName]          = useState(g.name ?? '');
+  const [targetAmt,     setTargetAmt]     = useState(String(g.target_amount ?? ''));
+  const [targetDate,    setTargetDate]    = useState(g.target_date ?? '');
+  const [saving,        setSaving]        = useState(false);
+  const [err,           setErr]           = useState('');
+
+  const savedAmount = Number(g.saved_amount ?? 0);
+  const [progressInput, setProgressInput] = useState(String(savedAmount));
+
+  // Derived preview values
+  const newSavedNum      = parseFloat(progressInput) || 0;
+  const parsedTarget     = parseFloat(targetAmt) || 0;
+  const previewPct       = parsedTarget > 0 ? Math.min(100, (newSavedNum / parsedTarget) * 100) : 0;
+  // delta: positive = more allocated to goal (wallet goes down), negative = less (wallet goes up)
+  const balanceDelta     = newSavedNum - savedAmount;
+  const projectedBalance = balance - balanceDelta;
+  const progressChanged  = progressInput !== String(savedAmount) && !isNaN(newSavedNum);
+
+  async function handleSave() {
+  setErr('');
+  const n        = parseFloat(targetAmt);
+  const newSaved = parseFloat(progressInput);
+
+  if (!name.trim())                    { setErr('Give your goal a name.'); return; }
+  if (!n || n <= 0)                    { setErr('Enter a valid target amount.'); return; }
+  if (isNaN(newSaved) || newSaved < 0) { setErr('Enter a valid goal balance (0 or more).'); return; }
+  if (newSaved > n)                    { setErr(`Goal balance can't exceed the target amount (${fmt(n, currencySymbol)}).`); return; }
+  if (newSaved > savedAmount && (newSaved - savedAmount) > balance) {
+    setErr(`Insufficient wallet funds. You can add at most ${fmt(balance, currencySymbol)} more to this goal.`);
+    return;
+  }
+
+  setSaving(true);
+  try {
+    // 1. Save goal metadata (no saved_amount — that lives in transactions)
+    await onSave({
+      name:          name.trim(),
+      target_amount: n,
+      target_date:   targetDate || null,
+    });
+
+    // 2. Only fire a transaction when increasing progress (wallet → goal)
+    // Decreasing is skipped — goal progress reflects actual transaction history
+    const delta = Math.round((newSaved - savedAmount) * 100) / 100;
+    if (delta > 0 && onTransaction) {
+      await onTransaction({
+        type:     'deposit',
+        amount:   delta,
+        category: 'Savings Transfer',
+        note:     `Manual progress adjustment for ${name.trim()}`,
+        date:     today(),
+        goal_id:  g.id,
+      });
+    }
+
+    onCancel();
+  } catch (e) {
+    setErr(e.message);
+  } finally {
+    setSaving(false);
+  }
+}
+
+  return (
+    <div className="rounded-xl pt-1 px-4 pb-3 space-y-3">
+      <label className="block">
+        <span className="text-xs text-gray-500 font-semibold">Goal name</span>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => { setName(e.target.value); setErr(''); }}
+          className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E] bg-white"
+        />
+      </label>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-xs text-gray-500 font-semibold">Target amount</span>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-mono">{currencySymbol}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={targetAmt}
+              onChange={(e) => { setTargetAmt(e.target.value); setErr(''); }}
+              className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E] bg-white"
+            />
+          </div>
+        </label>
+        <label className="block min-w-0">
+          <span className="text-xs text-gray-500 font-semibold">Target date</span>
+          <input
+            type="date"
+            value={targetDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+            className="mt-1 w-full border border-gray-200 rounded-xl px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E] bg-white text-gray-700"
+            style={{ WebkitAppearance: 'none', colorScheme: 'light', minHeight: '42px', lineHeight: '42px', display: 'block' }}
+          />
+        </label>
+      </div>
+
+      {/* Goal balance / progress field */}
+      <label className="block">
+        <span className="text-xs text-gray-500 font-semibold">Goal balance (amount saved so far)</span>
+        <div className="relative mt-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-mono">{currencySymbol}</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={progressInput}
+            onChange={(e) => { setProgressInput(e.target.value); setErr(''); }}
+            className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E] bg-white"
+          />
+        </div>
+      </label>
+
+      {/* Live preview — only shown when goal balance is changed */}
+      {progressChanged && (
+        <div className="bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2.5 text-xs space-y-1.5">
+          <p className="font-semibold text-[#1F3D2B] flex items-center gap-1">
+            <Info size={12} /> Balance impact preview
+          </p>
+          <div className="flex justify-between text-gray-500">
+            <span>Current goal balance:</span>
+            <span className="font-mono font-semibold">{fmt(savedAmount, currencySymbol)}</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>New goal balance:</span>
+            <span className="font-mono font-semibold">{fmt(newSavedNum, currencySymbol)}</span>
+          </div>
+          <div className="h-px bg-[#C7E26E]/30" />
+          <div className="flex justify-between font-bold">
+            <span className="text-gray-600">
+              {newSavedNum < savedAmount ? 'Note:' : 'Main wallet after save:'}
+            </span>
+          </div>
+          <VineProgress percent={previewPct} />
+          <p className="text-gray-400 text-center">{previewPct.toFixed(1)}% of goal after edit</p>
+        </div>
+      )}
+
+      {err && (
+        <p className="text-xs text-red-500 font-semibold flex items-center gap-1">
+          <AlertCircle size={12} /> {err}
+        </p>
+      )}
+
+      <div className="flex gap-2 justify-end pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-1"
+        >
+          <X size={13} /> Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#1F3D2B] text-[#C7E26E] hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1"
+        >
+          <Save size={13} /> {saving ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction, editGoal }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting,   setDeleting]   = useState(false);
+  const [editing,    setEditing]    = useState(false);
 
   const saved     = Number(g.saved_amount   ?? 0);
   const target    = Number(g.target_amount  ?? 0);
@@ -358,33 +531,66 @@ function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction }) {
     catch { setDeleting(false); setConfirming(false); }
   }
 
+  async function handleEditSave(updates) {
+    await editGoal(g.id, updates);
+  }
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-serif text-lg text-[#1F3D2B] leading-snug truncate">{g.name}</h3>
-          {g.target_date && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              Target date: {formatDate(g.target_date)}
-            </p>
+          {!editing && (
+            <>
+              <h3 className="font-serif text-lg text-[#1F3D2B] leading-snug truncate">{g.name}</h3>
+              {g.target_date && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Target date: {formatDate(g.target_date)}
+                </p>
+              )}
+            </>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <StatusPill days={days} percent={percent} />
-          {!confirming && (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="text-gray-300 hover:text-red-400 transition-colors p-1"
-              aria-label="Delete goal"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
+        {!editing && (
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusPill days={days} percent={percent} />
+            {!confirming && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="text-gray-300 hover:text-[#1F3D2B] transition-colors p-1"
+                  aria-label="Edit goal"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  className="text-gray-300 hover:text-red-400 transition-colors p-1"
+                  aria-label="Delete goal"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {confirming && (
+      {editing && (
+        <div className="mt-1">
+          <EditGoalForm
+            g={g}
+            onCancel={() => setEditing(false)}
+            onSave={handleEditSave}
+            onTransaction={addTransaction}
+            balance={balance}
+            currencySymbol={currencySymbol}
+          />
+        </div>
+      )}
+
+      {confirming && !editing && (
         <div className="mt-3 flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
           <p className="text-xs text-red-700 font-semibold flex-1">Delete "{g.name}"? This can't be undone.</p>
           <button
@@ -405,44 +611,48 @@ function GoalCard({ g, balance, currencySymbol, removeGoal, addTransaction }) {
         </div>
       )}
 
-      <div className="mt-3">
-        <div className="flex justify-between items-baseline mb-0.5">
-          <span className="font-mono font-bold text-[#1F3D2B] text-sm">{fmt(saved, currencySymbol)}</span>
-          <span className="text-xs text-gray-400 font-mono">of {fmt(target, currencySymbol)}</span>
-        </div>
-        <VineProgress percent={percent} />
-        <div className="flex justify-between text-xs text-gray-400">
-          <span>{Math.min(100, percent).toFixed(1)}% complete</span>
-          {remaining > 0 && <span>{fmt(remaining, currencySymbol)} to go</span>}
-        </div>
-      </div>
+      {!editing && (
+        <>
+          <div className="mt-3">
+            <div className="flex justify-between items-baseline mb-0.5">
+              <span className="font-mono font-bold text-[#1F3D2B] text-sm">{fmt(saved, currencySymbol)}</span>
+              <span className="text-xs text-gray-400 font-mono">of {fmt(target, currencySymbol)}</span>
+            </div>
+            <VineProgress percent={percent} />
+            <div className="flex justify-between text-xs text-gray-400">
+              <span>{Math.min(100, percent).toFixed(1)}% complete</span>
+              {remaining > 0 && <span>{fmt(remaining, currencySymbol)} to go</span>}
+            </div>
+          </div>
 
-      {daily && remaining > 0 && (
-        <div className="mt-3 flex items-center gap-2 bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2">
-          <TrendingUp size={14} className="text-green-700 shrink-0" />
-          <p className="text-xs text-green-800 font-semibold">
-            Save {fmt(daily, currencySymbol)}/day to hit your target on time.
-          </p>
-        </div>
-      )}
-      {percent >= 100 && (
-        <div className="mt-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2">
-          <Sun size={14} className="text-yellow-500 shrink-0" />
-          <p className="text-xs text-yellow-800 font-semibold">
-            Goal reached! You can keep adding or create a new challenge.
-          </p>
-        </div>
-      )}
+          {daily && remaining > 0 && (
+            <div className="mt-3 flex items-center gap-2 bg-[#F0F7EC] border border-[#C7E26E]/40 rounded-xl px-3 py-2">
+              <TrendingUp size={14} className="text-green-700 shrink-0" />
+              <p className="text-xs text-green-800 font-semibold">
+                Save {fmt(daily, currencySymbol)}/day to hit your target on time.
+              </p>
+            </div>
+          )}
+          {percent >= 100 && (
+            <div className="mt-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2">
+              <Sun size={14} className="text-yellow-500 shrink-0" />
+              <p className="text-xs text-yellow-800 font-semibold">
+                Goal reached! You can keep adding or create a new challenge.
+              </p>
+            </div>
+          )}
 
-      <QuickActions
-        goalId={g.id}
-        goalName={g.name}
-        savedAmount={saved}
-        targetAmount={target}
-        balance={balance}
-        addTransaction={addTransaction}
-        currencySymbol={currencySymbol}
-      />
+          <QuickActions
+            goalId={g.id}
+            goalName={g.name}
+            savedAmount={saved}
+            targetAmount={target}
+            balance={balance}
+            addTransaction={addTransaction}
+            currencySymbol={currencySymbol}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -455,6 +665,7 @@ export default function Goals({
   addGoal,
   removeGoal,
   addTransaction,
+  editGoal,
 }) {
   const [name,       setName]       = useState('');
   const [targetAmt,  setTargetAmt]  = useState('');
@@ -556,6 +767,7 @@ export default function Goals({
                 currencySymbol={currencySymbol}
                 removeGoal={removeGoal}
                 addTransaction={addTransaction}
+                editGoal={editGoal}
               />
             ))}
           </div>

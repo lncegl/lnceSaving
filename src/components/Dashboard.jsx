@@ -1,7 +1,7 @@
 // src/components/Dashboard.jsx
 import { useState } from 'react';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock, Pencil } from 'lucide-react';
+import { Target, Plus, Leaf, Sun, AlertTriangle, Receipt, ArrowDownLeft, ArrowUpRight, X, Clock, Pencil } from 'lucide-react';
 
 const DEPOSIT_CATEGORIES = [
   'Other', 'Salary', 'Freelance', 'Allowance', 'Business', 'Gift', 'Bonus',
@@ -87,6 +87,11 @@ export default function Dashboard({
   const [saving,   setSaving]   = useState(false);
   const [formErr,  setFormErr]  = useState('');
   const [modal,    setModal]    = useState(null);
+  const [freeBalTooltipOpen, setFreeBalTooltipOpen] = useState(false);
+
+  // Goal-encroachment confirmation state
+  const [goalWarningOpen, setGoalWarningOpen] = useState(false);
+  const [pendingTx,       setPendingTx]       = useState(null);
 
   const [storageModalOpen, setStorageModalOpen] = useState(false);
   const [storageNameDraft, setStorageNameDraft] = useState('');
@@ -96,6 +101,11 @@ export default function Dashboard({
 
   const storageName = settings?.storage_name || '';
   const storageIcon = settings?.storage_icon || '💰';
+
+  // Total amount currently earmarked inside goals
+  const totalGoalSaved = goals.reduce((s, g) => s + Number(g.saved_amount ?? 0), 0);
+  // Balance not tied up in any goal
+  const freeBalance = balance - totalGoalSaved;
 
   function openStorageModal() {
     setStorageNameDraft(storageName);
@@ -145,23 +155,10 @@ export default function Dashboard({
     setFormErr('');
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setFormErr('');
-    const n = parseFloat(amount);
-    if (!n || n <= 0) { setFormErr('Enter a valid amount.'); return; }
-    if (type === 'withdrawal' && n > balance) {
-      setFormErr(`Withdrawal amount exceeds your available balance of ${fmt(balance, currencySymbol)}.`);
-      return;
-    }
+  async function submitTransaction(txPayload) {
     setSaving(true);
     try {
-      await addTransaction({
-        type, amount: n, category,
-        note: note.trim() || null,
-        date: today(),
-        goal_id: type === 'deposit' ? (goalId || null) : null,
-      });
+      await addTransaction(txPayload);
       setAmount(''); setNote(''); setGoalId('');
       closeModal();
     } catch (err) {
@@ -171,7 +168,45 @@ export default function Dashboard({
     }
   }
 
-  const netUp = monthNet >= 0;
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setFormErr('');
+    const n = parseFloat(amount);
+    if (!n || n <= 0) { setFormErr('Enter a valid amount.'); return; }
+    if (type === 'withdrawal' && n > balance) {
+      setFormErr(`Withdrawal amount exceeds your available balance of ${fmt(balance, currencySymbol)}.`);
+      return;
+    }
+
+    const txPayload = {
+      type, amount: n, category,
+      note: note.trim() || null,
+      date: today(),
+      goal_id: type === 'deposit' ? (goalId || null) : null,
+    };
+
+    // Withdrawal would dip into money earmarked for goals — warn but allow.
+    if (type === 'withdrawal' && n > freeBalance) {
+      setPendingTx(txPayload);
+      setGoalWarningOpen(true);
+      return;
+    }
+
+    await submitTransaction(txPayload);
+  }
+
+  async function confirmGoalEncroachment() {
+    if (!pendingTx) return;
+    setGoalWarningOpen(false);
+    await submitTransaction(pendingTx);
+    setPendingTx(null);
+  }
+
+  function cancelGoalEncroachment() {
+    setGoalWarningOpen(false);
+    setPendingTx(null);
+  }
+
   const overdueBills = unpaidUrgentBills.filter(b => b.isOverdue);
   const dueSoonBills = unpaidUrgentBills.filter(b => b.isUrgent);
 
@@ -222,9 +257,73 @@ export default function Dashboard({
           </div>
         </div>
 
-        <div className={`flex items-center gap-1.5 mt-3 text-sm font-semibold ${netUp ? 'text-[#C7E26E]' : 'text-yellow-300'}`}>
-          {netUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-          {fmt(Math.abs(monthNet), currencySymbol)} {netUp ? 'saved' : 'spent'} this month
+        {/* ── Free balance row ── */}
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-[16px] font-serif font-semibold text-[#C7E26E]">
+            {fmt(Math.max(0, freeBalance), currencySymbol)}
+          </span>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/50 leading-tight">
+            Free Balance
+          </span>
+          {/* Question-mark button + tooltip */}
+          <div className="relative flex items-center">
+            <button
+              type="button"
+              aria-label="What is free balance?"
+              onClick={() => setFreeBalTooltipOpen((v) => !v)}
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold bg-white/15 text-white/70 hover:bg-[#C7E26E]/30 hover:text-[#C7E26E] border border-white/20 transition-all leading-none"
+            >
+              ?
+            </button>
+            {freeBalTooltipOpen && (
+              <>
+                {/* Backdrop to close on outside click */}
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setFreeBalTooltipOpen(false)}
+                />
+                <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-72 rounded-2xl shadow-2xl border border-[#C7E26E]/30 bg-[#1F3D2B] overflow-hidden">
+                  {/* Header strip */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-[#C7E26E]/15 border-b border-[#C7E26E]/20">
+                    <p className="text-sm font-bold text-[#C7E26E]">What is free balance?</p>
+                    <button
+                      type="button"
+                      onClick={() => setFreeBalTooltipOpen(false)}
+                      className="text-white/40 hover:text-white transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                  <div className="px-4 py-3 space-y-3">
+                    <p className="text-xs text-white/75 leading-relaxed">
+                      Your total balance includes money already set aside inside your savings goals.
+                      Free balance is what's left after subtracting that — the money you can actually spend or move freely.
+                    </p>
+                    {/* Formula */}
+                    <div className="rounded-xl bg-[#C7E26E]/10 border border-[#C7E26E]/20 px-3 py-2 font-mono text-[11px] text-[#C7E26E]">
+                      Free balance = Total balance − Total saved in goals
+                    </div>
+                    {/* Worked example */}
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 space-y-1.5 text-[11px]">
+                      <div className="flex justify-between text-white/60">
+                        <span>Total balance</span>
+                        <span className="font-mono">{fmt(balance, currencySymbol)}</span>
+                      </div>
+                      <div className="flex justify-between text-white/60">
+                        <span>Total saved in goals</span>
+                        <span className="font-mono">− {fmt(totalGoalSaved, currencySymbol)}</span>
+                      </div>
+                      <div className="h-px bg-white/10" />
+                      <div className="flex justify-between font-bold text-[#C7E26E]">
+                        <span>Free balance</span>
+                        <span className="font-mono">{fmt(Math.max(0, freeBalance), currencySymbol)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {balanceSeries.length > 1 && (
@@ -471,6 +570,11 @@ export default function Dashboard({
                     className="w-full border border-gray-200 rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C7E26E]"
                   />
                 </div>
+                {modal === 'withdrawal' && totalGoalSaved > 0 && (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {fmt(freeBalance, currencySymbol)} available before touching goal funds.
+                  </p>
+                )}
               </label>
 
               <div className={`grid gap-3 ${modal === 'deposit' && goals.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -536,6 +640,62 @@ export default function Dashboard({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Goal-encroachment warning modal ── */}
+      {goalWarningOpen && pendingTx && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white border-2 border-amber-300 rounded-2xl max-w-md w-full p-6 shadow-xl text-left">
+            <div className="flex items-center gap-3 text-amber-600 mb-3">
+              <div className="p-2 bg-amber-50 rounded-xl">
+                <AlertTriangle size={24} />
+              </div>
+              <h4 className="text-lg font-serif font-bold text-gray-900">This dips into your goal funds</h4>
+            </div>
+
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Withdrawing <span className="font-bold">{fmt(pendingTx.amount, currencySymbol)}</span> goes beyond your free balance of <span className="font-bold">{fmt(Math.max(0, freeBalance), currencySymbol)}</span>. The rest will come out of money currently earmarked inside your savings goals.
+            </p>
+
+            <div className="my-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100 space-y-2 text-xs">
+              <div className="flex justify-between text-gray-500">
+                <span>Total balance:</span>
+                <span className="font-mono font-semibold">{fmt(balance, currencySymbol)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500">
+                <span>Total saved in goals:</span>
+                <span className="font-mono font-semibold">{fmt(totalGoalSaved, currencySymbol)}</span>
+              </div>
+              <div className="h-px bg-gray-200 my-1" />
+              <div className="flex justify-between text-gray-900 font-bold text-sm">
+                <span>Free balance:</span>
+                <span className="font-mono text-[#1F3D2B]">{fmt(Math.max(0, freeBalance), currencySymbol)}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
+              Reminder: This withdrawal won’t automatically lower your goal's progress. If this money was meant for a goal, you'll need to manually adjust it in the Goals tab otherwise, your dashboard will show you have more saved than you actually do.
+            </p>
+
+            <div className="mt-5 flex gap-2.5 justify-end">
+              <button
+                type="button"
+                onClick={cancelGoalEncroachment}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmGoalEncroachment}
+                disabled={saving}
+                className="px-5 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {saving ? 'Processing…' : 'Withdraw anyway'}
+              </button>
+            </div>
           </div>
         </div>
       )}

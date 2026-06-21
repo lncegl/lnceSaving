@@ -411,10 +411,26 @@
       return savedGoal;
     }, [user]);
 
+    //remove goal
     const removeGoal = useCallback(async (id) => {
       await dbDeleteGoal(id);
       setGoals(prev => prev.filter(g => g.id !== id));
     }, []);
+
+    //edit goal
+    const editGoal = useCallback(async (id, fields) => {
+      if (!user) throw new Error('User must be logged in.');
+      const { data, error } = await supabase
+        .from('goals')
+        .update(fields)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      setGoals(prev => prev.map(g => g.id === id ? { ...g, ...data } : g));
+      return data;
+    }, [user]);
 
     // 7. Settings actions
     const updateSettings = useCallback(async (newSettings) => {
@@ -551,6 +567,7 @@
       removeTransaction,
       addGoal,
       removeGoal,
+      editGoal,
       updateSettings,
       addBill,
       removeBill,

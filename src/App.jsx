@@ -8,7 +8,7 @@ import Bills from './components/Bills';
 import Activity from './components/Activity';
 import AIChat from './components/AIChat';
 import Settings from './components/Settings';
-import ResetPassword from './components/ResetPassword'; // Added ResetPassword component
+import ResetPassword from './components/ResetPassword';
 import { useSavings } from './hooks/useSavings';
 
 export default function App() {
@@ -19,7 +19,7 @@ export default function App() {
     monthNet, balanceSeries,
     billsWithStatus, unpaidUrgentBills,
     addTransaction, removeTransaction,
-    addGoal, removeGoal, updateSettings,
+    addGoal, removeGoal, editGoal, updateSettings,
     addBill, removeBill, updateBill, payBill, markAsPaid, unpayBill, resetMonthlyBills,
     resetData,
   } = useSavings();
@@ -113,6 +113,7 @@ export default function App() {
             goals={computedGoals}
             addGoal={addGoal}
             removeGoal={removeGoal}
+            editGoal={editGoal}
             addTransaction={addTransaction}
             balance={balance}
             currencySymbol={activeCurrency}
