@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import TransactionHistory from './TransactionHistory';
 import Insights from './Insights';
+import CalendarView from './CalendarView';
 
 export default function Activity({
   transactions, goals, totalDeposited, totalWithdrawn,
@@ -15,6 +16,7 @@ export default function Activity({
       <div className="flex gap-2">
         {[
           { value: 'transactions', label: 'Transactions' },
+          { value: 'calendar',     label: 'Calendar'     },
           { value: 'insights',     label: 'Insights'     },
         ].map(({ value, label }) => (
           <button
@@ -36,6 +38,13 @@ export default function Activity({
         <TransactionHistory
           transactions={transactions}
           removeTransaction={removeTransaction}
+          currencySymbol={currencySymbol}
+        />
+      )}
+
+      {tab === 'calendar' && (
+        <CalendarView
+          transactions={transactions}
           currencySymbol={currencySymbol}
         />
       )}
